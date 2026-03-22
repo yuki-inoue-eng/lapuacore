@@ -2,7 +2,10 @@ module github.com/yuki-inoue-eng/lapuacore
 
 go 1.22.4
 
-require github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
+require (
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
+	github.com/shopspring/decimal v1.4.0
+)
 
 require (
 	github.com/kr/pretty v0.3.1 // indirect
