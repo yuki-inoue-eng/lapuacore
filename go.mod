@@ -1,6 +1,6 @@
 module github.com/yuki-inoue-eng/lapuacore
 
-go 1.22.4
+go 1.26.1
 
 require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
