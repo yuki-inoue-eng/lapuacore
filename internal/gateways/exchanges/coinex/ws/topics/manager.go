@@ -19,7 +19,7 @@ const (
 type Manager struct {
 	mu       sync.RWMutex
 	topicMap map[string]Topic
-	msgIDMap map[string]string // subscribe メッセージ ID → トピック名
+	msgIDMap map[string]string // maps subscribe message ID to topic name
 }
 
 func NewManager() *Manager {

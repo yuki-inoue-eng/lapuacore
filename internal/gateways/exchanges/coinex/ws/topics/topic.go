@@ -2,7 +2,7 @@ package topics
 
 import "time"
 
-// Topic は websocket channel topic のインターフェース
+// Topic is the interface for a WebSocket channel topic.
 type Topic interface {
 	TopicName() string
 	SubscribeMsgID() string

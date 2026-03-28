@@ -124,8 +124,8 @@ func (c *Channel) initAndListen(ctx context.Context) error {
 	return nil
 }
 
-// Start はチャンネルを初期化し購読とヘルスチェックを開始します。
-// 切断時は自動で再接続します。終了するには ctx をキャンセルしてください。
+// Start initializes the channel, starts subscriptions and health checks.
+// It automatically reconnects on disconnection. Cancel ctx to stop.
 func (c *Channel) Start(ctx context.Context) error {
 	c.mu.Lock()
 	c.isRunning = true

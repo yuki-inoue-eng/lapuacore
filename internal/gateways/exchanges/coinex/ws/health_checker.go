@@ -43,7 +43,7 @@ func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.D
 	}
 }
 
-// pongReceiveHandleFunc は CoinEx が TextMessage で返す pong を検出する
+// pongReceiveHandleFunc detects pong responses that CoinEx returns as TextMessage.
 func (c *healthChecker) pongReceiveHandleFunc(rawMsg []byte) error {
 	msg := struct {
 		Data struct {
