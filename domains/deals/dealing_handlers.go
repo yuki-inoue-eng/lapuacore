@@ -225,6 +225,10 @@ func (d *Dealer) HandleOrderData(datas []*OrderData) {
 				continue
 			}
 		}
+
+		// Status transitions for order placement (Sending→Pending), cancellation (Canceling→Done),
+		// and amendment (Amending→Pending) are driven by HTTP response callbacks
+		// (handleSendOrderResp, handleCancelOrderResp, handleAmendOrderResp), not by this handler.
 	}
 }
 

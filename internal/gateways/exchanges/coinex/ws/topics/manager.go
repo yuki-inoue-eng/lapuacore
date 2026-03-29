@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	chanOB = "depth.update"
+	chanOB    = "depth.update" // orderbook
+	chanOrder = "order.update" // personal order
 )
 
 type Manager struct {
@@ -96,15 +97,22 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 		Method string `json:"method"`
 		Data   struct {
 			Symbol string `json:"market"`
+			Order  struct {
+				Symbol string `json:"market"`
+			} `json:"order"`
 		} `json:"data"`
 	}{}
 	if err := json.Unmarshal(rawMsg, &msg); err != nil {
 		return "", err
 	}
-	if msg.Method != chanOB {
+	switch msg.Method {
+	case chanOB:
+		return fmt.Sprintf("orderBook@%s", msg.Data.Symbol), nil
+	case chanOrder:
+		return fmt.Sprintf("personal.order@%s", msg.Data.Order.Symbol), nil
+	default:
 		return "", nil
 	}
-	return fmt.Sprintf("orderBook@%s", msg.Data.Symbol), nil
 }
 
 func genMsgID() int64 {

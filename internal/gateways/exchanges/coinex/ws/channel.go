@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws/topics"
 )
 
@@ -31,6 +32,7 @@ type Channel struct {
 	conn              *websocket.Conn
 	topicMg           *topics.Manager
 	reconnectInterval time.Duration
+	credential        gateways.Credential // nil for public channel
 
 	healthChecker *healthChecker
 	msgReceiver   *messageReceiver
@@ -45,9 +47,18 @@ type Channel struct {
 
 func NewPublicChannel() *Channel {
 	return &Channel{
-		topicMg:          topics.NewManager(),
+		topicMg:           topics.NewManager(),
 		reconnectInterval: 1 * time.Second,
-		reconnectSigChan: make(chan struct{}, 1000),
+		reconnectSigChan:  make(chan struct{}, 1000),
+	}
+}
+
+func NewPrivateChannel(credential gateways.Credential) *Channel {
+	return &Channel{
+		topicMg:           topics.NewManager(),
+		reconnectInterval: 1 * time.Second,
+		reconnectSigChan:  make(chan struct{}, 1000),
+		credential:        credential,
 	}
 }
 
@@ -113,6 +124,13 @@ func (c *Channel) initAndListen(ctx context.Context) error {
 
 	go c.msgReceiver.start()
 	time.Sleep(200 * time.Millisecond)
+
+	if c.credential != nil {
+		if err := c.authenticate(); err != nil {
+			return fmt.Errorf("failed to authenticate: %w", err)
+		}
+	}
+
 	go c.healthChecker.start(ctx)
 	time.Sleep(200 * time.Millisecond)
 
@@ -122,6 +140,24 @@ func (c *Channel) initAndListen(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (c *Channel) authenticate() error {
+	const authTimeout = 5 * time.Second
+	auth := newAuthor(c.conn, c.credential)
+	c.msgReceiver.setHandler(auth.handleMessage)
+	if err := auth.sendAuthRequest(); err != nil {
+		return fmt.Errorf("failed to send auth request: %w", err)
+	}
+	select {
+	case <-auth.authDone:
+		slog.Info("coinex private channel authenticated")
+		return nil
+	case err := <-auth.authFail:
+		return err
+	case <-time.After(authTimeout):
+		return fmt.Errorf("auth timeout after %v", authTimeout)
+	}
 }
 
 // Start initializes the channel, starts subscriptions and health checks.
