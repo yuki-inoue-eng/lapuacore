@@ -44,6 +44,24 @@ func InitAndStart(
 	go Exporter.Start(Ctx)
 }
 
+// InitAndStartDCMode initializes and starts in data curator mode.
+// strategyName is not used; bucketName is used as the Discord username.
+func InitAndStartDCMode(
+	bucketName string,
+	influxUrl string,
+	influxToken string,
+	discordInfoUrl string,
+	discordWarnUrl string,
+	discordEmergencyUrl string,
+	logFilePath string,
+) {
+	Ctx, Cancel = initializers.NewCancellableContext()
+	logger.InitLogger(Ctx, logFilePath)
+	Exporter = metrics.NewExporter(bucketName, "", influxUrl, influxToken)
+	Discord = discord.NewClient(bucketName, discordInfoUrl, discordWarnUrl, discordEmergencyUrl)
+	go Exporter.Start(Ctx)
+}
+
 // InitAndStartNoopMode starts with noop exporter and noop discord client (for testing).
 func InitAndStartNoopMode() {
 	Ctx, Cancel = initializers.NewCancellableContext()
