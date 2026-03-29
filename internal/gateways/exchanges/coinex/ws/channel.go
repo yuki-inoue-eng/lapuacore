@@ -32,7 +32,8 @@ type Channel struct {
 	conn              *websocket.Conn
 	topicMg           *topics.Manager
 	reconnectInterval time.Duration
-	credential        gateways.Credential // nil for public channel
+	credential        gateways.Credential        // nil for public channel
+	latencyMeasurer   *gateways.LatencyMeasurer // nil if latency measurement is disabled
 
 	healthChecker *healthChecker
 	msgReceiver   *messageReceiver
@@ -45,21 +46,27 @@ type Channel struct {
 	alertChan <-chan error
 }
 
-func NewPublicChannel() *Channel {
+func NewPublicChannel(measurer *gateways.LatencyMeasurer) *Channel {
 	return &Channel{
 		topicMg:           topics.NewManager(),
 		reconnectInterval: 1 * time.Second,
 		reconnectSigChan:  make(chan struct{}, 1000),
+		latencyMeasurer:   measurer,
 	}
 }
 
-func NewPrivateChannel(credential gateways.Credential) *Channel {
+func NewPrivateChannel(credential gateways.Credential, measurer *gateways.LatencyMeasurer) *Channel {
 	return &Channel{
 		topicMg:           topics.NewManager(),
 		reconnectInterval: 1 * time.Second,
 		reconnectSigChan:  make(chan struct{}, 1000),
 		credential:        credential,
+		latencyMeasurer:   measurer,
 	}
+}
+
+func (c *Channel) GetLatencyMeasurer() *gateways.LatencyMeasurer {
+	return c.latencyMeasurer
 }
 
 func (c *Channel) SetTopics(ts []topics.Topic) {
@@ -223,6 +230,13 @@ func (c *Channel) Start(ctx context.Context) error {
 			timestamp := time.Now()
 			if err := c.topicMg.HandleTopicMessage(&timestamp, rawMsg); err != nil {
 				slog.Error(fmt.Sprintf("failed to handle message: %v", err), "message", string(rawMsg))
+			}
+			if c.latencyMeasurer != nil {
+				if tName, latency, err := c.topicMg.MeasureLatency(rawMsg); err != nil {
+					slog.Error(fmt.Sprintf("failed to measure latency: %v", err))
+				} else if tName != "" {
+					c.latencyMeasurer.RecordLatency(tName, latency)
+				}
 			}
 		}
 	}
