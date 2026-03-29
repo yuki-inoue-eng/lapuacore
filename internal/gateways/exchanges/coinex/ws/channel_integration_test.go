@@ -15,7 +15,7 @@ import (
 )
 
 func TestOrderBookStream(t *testing.T) {
-	ch := ws.NewPublicChannel()
+	ch := ws.NewPublicChannel(nil)
 
 	obTopic := topics.NewOrderBookTopic(domains.SymbolCoinExFuturesBTCUSDT.Name())
 	obTopic.SetHandler(func(data *insights.OrderBookData) {

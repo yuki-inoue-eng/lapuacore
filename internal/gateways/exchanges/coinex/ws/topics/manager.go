@@ -115,6 +115,42 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 	}
 }
 
+func (mg *Manager) MeasureLatency(rawMsg []byte) (string, time.Duration, error) {
+	now := time.Now()
+	msg := struct {
+		Data struct {
+			UpdatedAt int64 `json:"updated_at"` // unix timestamp in milliseconds (book ticker)
+			Depth     struct {
+				UpdatedAt int64 `json:"updated_at"` // unix timestamp in milliseconds (order book)
+			} `json:"depth"`
+			DealList []struct {
+				CreatedAt int64 `json:"created_at"` // unix timestamp in milliseconds (trade)
+			} `json:"deal_list"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil {
+		return "", 0, err
+	}
+
+	name, err := mg.getTopicName(rawMsg)
+	if err != nil {
+		return "", 0, err
+	}
+
+	ts := msg.Data.UpdatedAt
+	if ts == 0 {
+		ts = msg.Data.Depth.UpdatedAt
+	}
+	if ts == 0 && len(msg.Data.DealList) > 0 {
+		ts = msg.Data.DealList[0].CreatedAt
+	}
+	if ts == 0 {
+		return "", 0, nil
+	}
+
+	return name, now.Sub(time.UnixMilli(ts)), nil
+}
+
 func genMsgID() int64 {
 	u := uuid.New()
 	i := new(big.Int)
