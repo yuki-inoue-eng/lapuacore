@@ -23,10 +23,18 @@ type RawAuthConfig struct {
 	Token string `yaml:"token"`
 }
 
+// RawDiscord holds the raw Discord webhook URLs parsed from YAML.
+type RawDiscord struct {
+	InfoUrl      string `yaml:"info_url"`
+	WarnUrl      string `yaml:"warn_url"`
+	EmergencyUrl string `yaml:"emergency_url"`
+}
+
 // RawSecret represents the raw parsed YAML secret file.
 type RawSecret struct {
 	Exchange Exchange      `yaml:"exchanges"`
 	InfluxDB RawAuthConfig `yaml:"influxdb"`
+	Discord  RawDiscord    `yaml:"discord"`
 }
 
 func readRawSecret(filePath string) (*RawSecret, error) {

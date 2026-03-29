@@ -58,10 +58,26 @@ func (a *AuthConfig) GetToken() string {
 	return a.token
 }
 
-// Secret holds processed credentials for exchanges and InfluxDB.
+// DiscordConfig holds Discord webhook URLs.
+type DiscordConfig struct {
+	infoUrl      string
+	warnUrl      string
+	emergencyUrl string
+}
+
+func (d *DiscordConfig) setInfoUrl(url string)      { d.infoUrl = url }
+func (d *DiscordConfig) setWarnUrl(url string)      { d.warnUrl = url }
+func (d *DiscordConfig) setEmergencyUrl(url string) { d.emergencyUrl = url }
+
+func (d *DiscordConfig) GetInfoUrl() string      { return d.infoUrl }
+func (d *DiscordConfig) GetWarnUrl() string      { return d.warnUrl }
+func (d *DiscordConfig) GetEmergencyUrl() string { return d.emergencyUrl }
+
+// Secret holds processed credentials for exchanges, InfluxDB, and Discord.
 type Secret struct {
 	CoinEx   *Credential
 	InfluxDB *AuthConfig
+	Discord  *DiscordConfig
 }
 
 func newSecret(raw *RawSecret) *Secret {
@@ -73,6 +89,11 @@ func newSecret(raw *RawSecret) *Secret {
 		InfluxDB: &AuthConfig{
 			url:   raw.InfluxDB.Url,
 			token: raw.InfluxDB.Token,
+		},
+		Discord: &DiscordConfig{
+			infoUrl:      raw.Discord.InfoUrl,
+			warnUrl:      raw.Discord.WarnUrl,
+			emergencyUrl: raw.Discord.EmergencyUrl,
 		},
 	}
 	return secret
@@ -97,5 +118,16 @@ func (s *Secret) update(raw *RawSecret) {
 		s.InfluxDB.setUrl(raw.InfluxDB.Url)
 		s.InfluxDB.setToken(raw.InfluxDB.Token)
 		slog.Info("Updated InfluxDB Credential")
+	}
+
+	shouldUpdateDiscord := s.Discord.GetInfoUrl() != raw.Discord.InfoUrl ||
+		s.Discord.GetWarnUrl() != raw.Discord.WarnUrl ||
+		s.Discord.GetEmergencyUrl() != raw.Discord.EmergencyUrl
+
+	if shouldUpdateDiscord {
+		s.Discord.setInfoUrl(raw.Discord.InfoUrl)
+		s.Discord.setWarnUrl(raw.Discord.WarnUrl)
+		s.Discord.setEmergencyUrl(raw.Discord.EmergencyUrl)
+		slog.Info("Updated Discord Config")
 	}
 }

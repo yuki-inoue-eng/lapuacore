@@ -37,6 +37,10 @@ exchanges:
 influxdb:
   url: "http://localhost:8086"
   token: "initial_token"
+discord:
+  info_url: "https://discord.com/info"
+  warn_url: "https://discord.com/warn"
+  emergency_url: "https://discord.com/emergency"
 `)
 	return
 }
@@ -139,6 +143,10 @@ exchanges:
 influxdb:
   url: "http://localhost:8086"
   token: "initial_token"
+discord:
+  info_url: "https://discord.com/info"
+  warn_url: "https://discord.com/warn"
+  emergency_url: "https://discord.com/emergency"
 `,
 			wantApiKey: "new_key",
 			wantUrl:    "http://localhost:8086",
@@ -153,6 +161,10 @@ exchanges:
 influxdb:
   url: "http://new-host:8086"
   token: "new_token"
+discord:
+  info_url: "https://discord.com/info"
+  warn_url: "https://discord.com/warn"
+  emergency_url: "https://discord.com/emergency"
 `,
 			wantApiKey: "initial_key",
 			wantUrl:    "http://new-host:8086",
@@ -189,6 +201,9 @@ func TestNewWatcher(t *testing.T) {
 		assert.Equal(t, "initial_secret", w.GetSecret().CoinEx.GetSecret())
 		assert.Equal(t, "http://localhost:8086", w.GetSecret().InfluxDB.GetUrl())
 		assert.Equal(t, "initial_token", w.GetSecret().InfluxDB.GetToken())
+		assert.Equal(t, "https://discord.com/info", w.GetSecret().Discord.GetInfoUrl())
+		assert.Equal(t, "https://discord.com/warn", w.GetSecret().Discord.GetWarnUrl())
+		assert.Equal(t, "https://discord.com/emergency", w.GetSecret().Discord.GetEmergencyUrl())
 	})
 }
 
