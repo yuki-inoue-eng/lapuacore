@@ -8,6 +8,17 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// Option configures a Watcher.
+type Option func(*Watcher)
+
+// WithParamValidator sets a validation function that is called before applying
+// config updates during hot-reload. If the validator returns an error, the old
+// config is kept and the error is logged. This prevents runtime panics from
+// ParamMap getters caused by invalid config values.
+func WithParamValidator(fn func(map[string]string) error) Option {
+	return func(w *Watcher) { w.validateParams = fn }
+}
+
 // Watcher monitors config and secret files for changes using fsnotify.
 type Watcher struct {
 	watcher *fsnotify.Watcher
@@ -15,12 +26,14 @@ type Watcher struct {
 	configFilePath string
 	secretFilePath string
 
+	validateParams func(map[string]string) error
+
 	config *Config
 	secret *Secret
 }
 
 // NewWatcher creates a new Watcher that reads and watches the given config and secret files.
-func NewWatcher(configFilePath, secretFilePath string) *Watcher {
+func NewWatcher(configFilePath, secretFilePath string, opts ...Option) *Watcher {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -50,6 +63,10 @@ func NewWatcher(configFilePath, secretFilePath string) *Watcher {
 		secret:         newSecret(rawSecret),
 		configFilePath: configFilePath,
 		secretFilePath: secretFilePath,
+	}
+
+	for _, opt := range opts {
+		opt(w)
 	}
 
 	return w
@@ -134,6 +151,11 @@ func (w *Watcher) updateConfig() error {
 	rawConf, err := readRawConfig(w.configFilePath)
 	if err != nil {
 		return err
+	}
+	if w.validateParams != nil {
+		if err := w.validateParams(rawConf.Params); err != nil {
+			return fmt.Errorf("config validation failed, keeping old config: %w", err)
+		}
 	}
 	w.config.update(rawConf)
 	return nil
