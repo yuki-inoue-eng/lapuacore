@@ -1,9 +1,11 @@
 package lapua
 
 import (
+	"errors"
 	"log/slog"
 	"time"
 
+	"github.com/yuki-inoue-eng/lapuacore/configs"
 	"github.com/yuki-inoue-eng/lapuacore/initializers"
 	"github.com/yuki-inoue-eng/lapuacore/initializers/discord"
 	"github.com/yuki-inoue-eng/lapuacore/initializers/exchanges"
@@ -17,48 +19,80 @@ import (
 var (
 	Ctx      context.Context
 	Cancel   context.CancelFunc
+	Params   *configs.ParamMap
+	Secrets  *configs.Secret
 	Exporter *metrics.Exporter
 	Discord  *discord.Client
+)
+
+// File paths set by InitFilePaths.
+var (
+	ConfigFilePath string
+	SecretFilePath string
+	LogFilePath    string
 )
 
 func IsInitialized() bool {
 	return Ctx != nil && Exporter != nil
 }
 
-// InitAndStart initializes and starts all core components.
-// All configuration values are passed as arguments (configs package is not yet ported).
-func InitAndStart(
-	strategyName string,
-	bucketName string,
-	influxUrl string,
-	influxToken string,
-	discordInfoUrl string,
-	discordWarnUrl string,
-	discordEmergencyUrl string,
-	logFilePath string,
-) {
+// InitFilePaths sets the file paths used by InitAndStart and InitAndStartDCMode.
+func InitFilePaths(configFilePath, secretFilePath, logFilePath string) {
+	ConfigFilePath = configFilePath
+	SecretFilePath = secretFilePath
+	LogFilePath = logFilePath
+}
+
+// InitAndStart initializes and starts all core components using config and secret files.
+func InitAndStart(watcherOpts ...configs.Option) {
+	validateFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
-	logger.InitLogger(Ctx, logFilePath)
-	Exporter = metrics.NewExporter(bucketName, strategyName, influxUrl, influxToken)
-	Discord = discord.NewClient(strategyName, discordInfoUrl, discordWarnUrl, discordEmergencyUrl)
+	logger.InitLogger(Ctx, LogFilePath)
+	watcher := configs.NewWatcher(ConfigFilePath, SecretFilePath, watcherOpts...)
+	config := watcher.GetConfig()
+	Secrets = watcher.GetSecret()
+	Params = config.Params
+	Exporter = metrics.NewExporter(
+		config.Strategy.Name,
+		config.Strategy.Name,
+		Secrets.InfluxDB.GetUrl(),
+		Secrets.InfluxDB.GetToken(),
+	)
+	Discord = discord.NewClient(config.Strategy.Name,
+		Secrets.Discord.GetInfoUrl(),
+		Secrets.Discord.GetWarnUrl(),
+		Secrets.Discord.GetEmergencyUrl(),
+	)
+	go watcher.Start(Ctx)
 	go Exporter.Start(Ctx)
 }
 
 // InitAndStartDCMode initializes and starts in data curator mode.
-// strategyName is not used; bucketName is used as the Discord username.
-func InitAndStartDCMode(
-	bucketName string,
-	influxUrl string,
-	influxToken string,
-	discordInfoUrl string,
-	discordWarnUrl string,
-	discordEmergencyUrl string,
-	logFilePath string,
-) {
+// The bucketName from config params is used as the Discord username.
+func InitAndStartDCMode(watcherOpts ...configs.Option) {
+	validateFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
-	logger.InitLogger(Ctx, logFilePath)
-	Exporter = metrics.NewExporter(bucketName, "", influxUrl, influxToken)
-	Discord = discord.NewClient(bucketName, discordInfoUrl, discordWarnUrl, discordEmergencyUrl)
+	logger.InitLogger(Ctx, LogFilePath)
+	watcher := configs.NewWatcher(ConfigFilePath, SecretFilePath, watcherOpts...)
+	Secrets = watcher.GetSecret()
+	Params = watcher.GetConfig().Params
+
+	bucketName := Params.Get("bucketName")
+	if bucketName == "" {
+		panic(errors.New("influx db bucket name must be specified in config file"))
+	}
+	Exporter = metrics.NewExporter(
+		bucketName,
+		"",
+		Secrets.InfluxDB.GetUrl(),
+		Secrets.InfluxDB.GetToken(),
+	)
+	Discord = discord.NewClient(bucketName,
+		Secrets.Discord.GetInfoUrl(),
+		Secrets.Discord.GetWarnUrl(),
+		Secrets.Discord.GetEmergencyUrl(),
+	)
+	go watcher.Start(Ctx)
 	go Exporter.Start(Ctx)
 }
 
@@ -68,6 +102,18 @@ func InitAndStartNoopMode() {
 	Exporter = metrics.NewExporter("", "", "", "")
 	Discord = discord.NewClient("", "", "", "")
 	go Exporter.Start(Ctx)
+}
+
+func validateFilePaths() {
+	if ConfigFilePath == "" {
+		panic("config file path is not set")
+	}
+	if SecretFilePath == "" {
+		panic("secret file path is not set")
+	}
+	if LogFilePath == "" {
+		panic("log file path is not set")
+	}
 }
 
 // WaitForInsightsToBeReady blocks until all registered Insights report ready.
