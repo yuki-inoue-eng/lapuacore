@@ -44,8 +44,8 @@ func InitAndStart(
 	go Exporter.Start(Ctx)
 }
 
-// InitNoopMode starts with noop exporter and noop discord client (for testing).
-func InitNoopMode() {
+// InitAndStartNoopMode starts with noop exporter and noop discord client (for testing).
+func InitAndStartNoopMode() {
 	Ctx, Cancel = initializers.NewCancellableContext()
 	Exporter = metrics.NewExporter("", "", "", "")
 	Discord = discord.NewClient("", "", "", "")
