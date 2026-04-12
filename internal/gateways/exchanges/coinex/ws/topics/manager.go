@@ -13,7 +13,9 @@ import (
 )
 
 const (
+	chanBT    = "bbo.update"   // bookticker
 	chanOB    = "depth.update" // orderbook
+	chanTrade = "deals.update" // trade
 	chanOrder = "order.update" // personal order
 )
 
@@ -106,8 +108,12 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 		return "", err
 	}
 	switch msg.Method {
+	case chanBT:
+		return fmt.Sprintf("bookTicker@%s", msg.Data.Symbol), nil
 	case chanOB:
 		return fmt.Sprintf("orderBook@%s", msg.Data.Symbol), nil
+	case chanTrade:
+		return fmt.Sprintf("trade@%s", msg.Data.Symbol), nil
 	case chanOrder:
 		return fmt.Sprintf("personal.order@%s", msg.Data.Order.Symbol), nil
 	default:
