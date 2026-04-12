@@ -12,6 +12,7 @@ import (
 var Insights *coinexInsights
 
 type coinexInsights struct {
+	trades      map[*domains.Symbol]*insights.Trade
 	orderBooks  map[*domains.Symbol]*insights.OrderBook
 	bookTickers map[*domains.Symbol]*insights.BookTicker
 }
@@ -28,6 +29,14 @@ func (i *coinexInsights) GetOrderBook(symbol *domains.Symbol) *insights.OrderBoo
 	return ob
 }
 
+func (i *coinexInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
+	tr, ok := i.trades[symbol]
+	if !ok {
+		return nil
+	}
+	return tr
+}
+
 func (i *coinexInsights) GetBookTicker(symbol *domains.Symbol) *insights.BookTicker {
 	bt, ok := i.bookTickers[symbol]
 	if !ok {
@@ -37,6 +46,11 @@ func (i *coinexInsights) GetBookTicker(symbol *domains.Symbol) *insights.BookTic
 }
 
 func (i *coinexInsights) IsEverythingReady() bool {
+	for _, tr := range i.trades {
+		if !tr.IsReady() {
+			return false
+		}
+	}
 	for _, ob := range i.orderBooks {
 		if !ob.IsReady() {
 			return false
@@ -51,9 +65,23 @@ func (i *coinexInsights) IsEverythingReady() bool {
 }
 
 // InitInsights initializes CoinEx market data for the given symbols.
-func InitInsights(obSymbols []*domains.Symbol, btSymbols []*domains.Symbol) {
+func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, btSymbols []*domains.Symbol) {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
+	}
+
+	// setup trades
+	trades := map[*domains.Symbol]*insights.Trade{}
+	for _, symbol := range tradeSymbols {
+		trades[symbol] = insights.NewTrade(symbol)
+	}
+
+	// setup trade topics
+	var tradeTopics []topics.Topic
+	for symbol, trade := range trades {
+		tradeTopic := topics.NewTradeTopic(symbol.Name())
+		tradeTopic.SetHandler(trade.Update)
+		tradeTopics = append(tradeTopics, tradeTopic)
 	}
 
 	// setup orderBooks
@@ -88,11 +116,13 @@ func InitInsights(obSymbols []*domains.Symbol, btSymbols []*domains.Symbol) {
 
 	// set topics on public channel
 	if gatewayManager.publicChannel != nil {
+		gatewayManager.publicChannel.SetTopics(tradeTopics)
 		gatewayManager.publicChannel.SetTopics(obTopics)
 		gatewayManager.publicChannel.SetTopics(btTopics)
 	}
 
 	ins := &coinexInsights{
+		trades:      trades,
 		orderBooks:  orderBooks,
 		bookTickers: bookTickers,
 	}
