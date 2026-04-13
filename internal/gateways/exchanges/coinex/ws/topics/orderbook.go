@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/dtos"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/translators"
@@ -13,16 +14,16 @@ import (
 
 type OrderBookTopic struct {
 	name            string
-	symbolName      string
+	symbol          *domains.Symbol
 	obMsgTranslator *translators.OrderBookMsgTranslator
 	dataHandlers    []insights.OrderBookDataHandler
 	msgID           string
 }
 
-func NewOrderBookTopic(symbolName string) *OrderBookTopic {
+func NewOrderBookTopic(symbol *domains.Symbol) *OrderBookTopic {
 	return &OrderBookTopic{
-		name:            fmt.Sprintf("orderBook@%s", symbolName),
-		symbolName:      symbolName,
+		name:            fmt.Sprintf("orderBook@%s", symbol.Name()),
+		symbol:          symbol,
 		obMsgTranslator: translators.NewOrderBookMsgTranslator(),
 	}
 }
@@ -42,7 +43,7 @@ func (t *OrderBookTopic) SubscribeMsgID() string {
 func (t *OrderBookTopic) SubscribeMsg() []byte {
 	id := genMsgID()
 	t.msgID = strconv.FormatInt(id, 10)
-	return []byte(fmt.Sprintf(`{"method":"depth.subscribe","params":{"market_list":[["%s",50,"0",true]]},"id":%d}`, t.symbolName, id))
+	return []byte(fmt.Sprintf(`{"method":"depth.subscribe","params":{"market_list":[["%s",50,"0",true]]},"id":%d}`, t.symbol.Name(), id))
 }
 
 func (t *OrderBookTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {

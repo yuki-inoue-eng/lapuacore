@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/deals"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/dtos"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/translators"
@@ -13,16 +14,16 @@ import (
 
 type PositionTopic struct {
 	name                  string
-	symbolName            string
+	symbol                *domains.Symbol
 	positionMsgTranslator *translators.PositionMsgTranslator
 	dataHandlers          []deals.PositionDataHandler
 	msgID                 string
 }
 
-func NewPositionTopic(symbolName string) *PositionTopic {
+func NewPositionTopic(symbol *domains.Symbol) *PositionTopic {
 	return &PositionTopic{
-		name:                  fmt.Sprintf("personal.position@%s", symbolName),
-		symbolName:            symbolName,
+		name:                  fmt.Sprintf("personal.position@%s", symbol.Name()),
+		symbol:                symbol,
 		positionMsgTranslator: translators.NewPositionMsgTranslator(),
 	}
 }
@@ -42,7 +43,7 @@ func (t *PositionTopic) SubscribeMsgID() string {
 func (t *PositionTopic) SubscribeMsg() []byte {
 	id := genMsgID()
 	t.msgID = strconv.FormatInt(id, 10)
-	return []byte(fmt.Sprintf(`{"method":"position.subscribe","params":{"market_list":["%s"]},"id":%d}`, t.symbolName, id))
+	return []byte(fmt.Sprintf(`{"method":"position.subscribe","params":{"market_list":["%s"]},"id":%d}`, t.symbol.Name(), id))
 }
 
 func (t *PositionTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {

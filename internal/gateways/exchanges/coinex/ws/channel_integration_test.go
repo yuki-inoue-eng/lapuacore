@@ -17,7 +17,7 @@ import (
 func TestTradeStream(t *testing.T) {
 	ch := ws.NewPublicChannel(nil)
 
-	tradeTopic := topics.NewTradeTopic(domains.SymbolCoinExFuturesBTCUSDT.Name())
+	tradeTopic := topics.NewTradeTopic(domains.SymbolCoinExFuturesBTCUSDT)
 	tradeTopic.SetHandler(func(msg insights.TradeDataList) {
 		for _, d := range msg {
 			fmt.Printf("[%s] side=%s price=%s volume=%s execAt=%s\n",
@@ -38,7 +38,7 @@ func TestTradeStream(t *testing.T) {
 func TestOrderBookStream(t *testing.T) {
 	ch := ws.NewPublicChannel(nil)
 
-	obTopic := topics.NewOrderBookTopic(domains.SymbolCoinExFuturesBTCUSDT.Name())
+	obTopic := topics.NewOrderBookTopic(domains.SymbolCoinExFuturesBTCUSDT)
 	obTopic.SetHandler(func(data *insights.OrderBookData) {
 		bestAsk := "N/A"
 		bestBid := "N/A"
