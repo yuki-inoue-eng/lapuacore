@@ -11,10 +11,6 @@ var (
 	symbolMapByName map[string]*Symbol
 )
 
-func prtFloat64(v float64) *float64 {
-	return &v
-}
-
 func GetSymbol(id string) *Symbol {
 	if s, ok := symbolMapByID[id]; ok {
 		return s
@@ -33,21 +29,15 @@ type Symbol struct {
 	tickSize    decimal.Decimal
 	minOrderQty decimal.Decimal
 	baseAsset   Asset // 損益計算に使用されるコイン
-	feeRate     decimal.Decimal
 }
 
-func newSymbol(exchange, product, name string, tickSize, minOrderQty float64, baseAsset Asset, customFeeRatePercent *float64) *Symbol {
+func newSymbol(exchange, product, name string, tickSize, minOrderQty float64, baseAsset Asset) *Symbol {
 
 	if symbolMapByName == nil {
-		symbolMapByName = map[string]*Symbol{} // 初期化
+		symbolMapByName = map[string]*Symbol{}
 	}
 	if symbolMapByID == nil {
-		symbolMapByID = map[string]*Symbol{} // 初期化
-	}
-
-	feeRatePercent := defaultFeeRatePercent[exchange]
-	if customFeeRatePercent != nil {
-		feeRatePercent = *customFeeRatePercent
+		symbolMapByID = map[string]*Symbol{}
 	}
 
 	s := &Symbol{
@@ -58,7 +48,6 @@ func newSymbol(exchange, product, name string, tickSize, minOrderQty float64, ba
 		tickSize:    decimal.NewFromFloat(tickSize),
 		minOrderQty: decimal.NewFromFloat(minOrderQty),
 		baseAsset:   baseAsset,
-		feeRate:     decimal.NewFromFloat(feeRatePercent).Mul(decimal.NewFromFloat(0.01)),
 	}
 	symbolMapByID[s.id] = s
 	symbolMapByName[s.name] = s
@@ -85,7 +74,4 @@ func (s *Symbol) MinOrderQty() decimal.Decimal {
 }
 func (s *Symbol) BaseAsset() Asset {
 	return s.baseAsset
-}
-func (s *Symbol) FeeLate() decimal.Decimal {
-	return s.feeRate
 }
