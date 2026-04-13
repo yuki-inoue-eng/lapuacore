@@ -18,7 +18,7 @@ func dealerMakeLimitOrder(price, qty string, side domains.Side) *Order {
 	)
 }
 
-func dealerAddLivingOrder(d *Dealer, order *Order, status OrderStatus) {
+func dealerAddLivingOrder(d *DealerImpl, order *Order, status OrderStatus) {
 	order.setStatus(status)
 	d.LivingOrders.Set(order.GetID(), order)
 }

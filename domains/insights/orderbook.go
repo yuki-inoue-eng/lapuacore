@@ -19,7 +19,7 @@ type OrderBookData struct {
 	SeqID     int64
 }
 
-type OrderBook struct {
+type OrderBookImpl struct {
 	mu                    sync.RWMutex
 	muLockToUpdateHandler sync.Mutex
 	symbol                *domains.Symbol
@@ -40,8 +40,8 @@ type OrderBook struct {
 	deferCallback  func()
 }
 
-func NewOrderBook(symbol *domains.Symbol) *OrderBook {
-	return &OrderBook{
+func NewOrderBook(symbol *domains.Symbol) *OrderBookImpl {
+	return &OrderBookImpl{
 		symbol:  symbol,
 		BidsMap: newOBRecordMap(domains.QuoteBid, symbol.TickSize()),
 		AsksMap: newOBRecordMap(domains.QuoteAsk, symbol.TickSize()),
@@ -49,7 +49,7 @@ func NewOrderBook(symbol *domains.Symbol) *OrderBook {
 }
 
 // CalcBestPrice calculates the Ask and Bid closest to the specified midPrice.
-func (p *OrderBook) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
+func (p *OrderBookImpl) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	tickSize := p.symbol.TickSize()
@@ -58,19 +58,19 @@ func (p *OrderBook) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, de
 	return bestAsk, bestBid
 }
 
-func (p *OrderBook) GetBestAsk() *OBRecord {
+func (p *OrderBookImpl) GetBestAsk() *OBRecord {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.currentBestAsk
 }
 
-func (p *OrderBook) GetBestBid() *OBRecord {
+func (p *OrderBookImpl) GetBestBid() *OBRecord {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.currentBestBid
 }
 
-func (p *OrderBook) GetDiffBestAsk() *OBRecord {
+func (p *OrderBookImpl) GetDiffBestAsk() *OBRecord {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return &OBRecord{
@@ -81,7 +81,7 @@ func (p *OrderBook) GetDiffBestAsk() *OBRecord {
 	}
 }
 
-func (p *OrderBook) GetDiffBestBid() *OBRecord {
+func (p *OrderBookImpl) GetDiffBestBid() *OBRecord {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return &OBRecord{
@@ -92,31 +92,31 @@ func (p *OrderBook) GetDiffBestBid() *OBRecord {
 	}
 }
 
-func (p *OrderBook) setCurrentBestAsk(r *OBRecord) {
+func (p *OrderBookImpl) setCurrentBestAsk(r *OBRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.currentBestAsk = r
 }
 
-func (p *OrderBook) setCurrentBestBid(r *OBRecord) {
+func (p *OrderBookImpl) setCurrentBestBid(r *OBRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.currentBestBid = r
 }
 
-func (p *OrderBook) setBeforeBestAsk(r *OBRecord) {
+func (p *OrderBookImpl) setBeforeBestAsk(r *OBRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.beforeBestAsk = r
 }
 
-func (p *OrderBook) setBeforeBestBid(r *OBRecord) {
+func (p *OrderBookImpl) setBeforeBestBid(r *OBRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.beforeBestBid = r
 }
 
-func (p *OrderBook) IsReady() bool {
+func (p *OrderBookImpl) IsReady() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -125,31 +125,31 @@ func (p *OrderBook) IsReady() bool {
 		p.lastExecAt != nil
 }
 
-func (p *OrderBook) GetTickSize() decimal.Decimal {
+func (p *OrderBookImpl) GetTickSize() decimal.Decimal {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.symbol.TickSize()
 }
 
-func (p *OrderBook) setLastExecAt(t *time.Time) {
+func (p *OrderBookImpl) setLastExecAt(t *time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.lastExecAt = t
 }
 
-func (p *OrderBook) setLastArrivedAt(t *time.Time) {
+func (p *OrderBookImpl) setLastArrivedAt(t *time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.lastArrivedAt = t
 }
 
-func (p *OrderBook) GetLastExecAt() *time.Time {
+func (p *OrderBookImpl) GetLastExecAt() *time.Time {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.lastExecAt
 }
 
-func (p *OrderBook) GetLastArrivedAt() *time.Time {
+func (p *OrderBookImpl) GetLastArrivedAt() *time.Time {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.lastArrivedAt
@@ -158,12 +158,12 @@ func (p *OrderBook) GetLastArrivedAt() *time.Time {
 // RoundToTickSize rounds the given price down to the order book tick size
 // (i.e. truncates it to a multiple of tickSize).
 // This is used when retrieving order book data at a specific price.
-func (p *OrderBook) RoundToTickSize(price decimal.Decimal) decimal.Decimal {
+func (p *OrderBookImpl) RoundToTickSize(price decimal.Decimal) decimal.Decimal {
 	quotient := price.Div(p.symbol.TickSize()).Truncate(0)
 	return quotient.Mul(p.symbol.TickSize())
 }
 
-func (p *OrderBook) GetMinOrderQty() decimal.Decimal {
+func (p *OrderBookImpl) GetMinOrderQty() decimal.Decimal {
 	return p.symbol.MinOrderQty()
 }
 
@@ -171,7 +171,7 @@ func (p *OrderBook) GetMinOrderQty() decimal.Decimal {
 // the limit order resting at the specified price.
 // If the specified price is already marketable and would have been executed,
 // it returns 0.
-func (p *OrderBook) SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal {
+func (p *OrderBookImpl) SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal {
 	switch quote {
 	case domains.QuoteAsk:
 		return p.AsksMap.SumVolume(price)
@@ -185,7 +185,7 @@ func (p *OrderBook) SumVolume(quote domains.Quote, price decimal.Decimal) decima
 // AvgExecPrice returns the average execution price for a market order
 // with the specified quantity.
 // The result is rounded down to the order book tick size.
-func (p *OrderBook) AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal {
+func (p *OrderBookImpl) AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal {
 	switch quote {
 	case domains.QuoteAsk:
 		return p.RoundToTickSize(p.AsksMap.AvgExecPrice(qty))
@@ -196,7 +196,7 @@ func (p *OrderBook) AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decim
 	}
 }
 
-func (p *OrderBook) AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) decimal.Decimal {
+func (p *OrderBookImpl) AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) decimal.Decimal {
 	switch side {
 	case domains.SideBuy:
 		return p.RoundToTickSize(p.AsksMap.AvgExecPrice(qty))
@@ -207,7 +207,7 @@ func (p *OrderBook) AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) d
 	}
 }
 
-func (p *OrderBook) CalculateBidsVolSumMap() *OBRecordMap {
+func (p *OrderBookImpl) CalculateBidsVolSumMap() *OBRecordMap {
 	bidsVolSumMap := newOBRecordMap(domains.QuoteBid, p.symbol.TickSize())
 	sumVol := decimal.Zero
 	p.BidsMap.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
@@ -218,7 +218,7 @@ func (p *OrderBook) CalculateBidsVolSumMap() *OBRecordMap {
 	return bidsVolSumMap
 }
 
-func (p *OrderBook) CalculateAsksVolSumMap() *OBRecordMap {
+func (p *OrderBookImpl) CalculateAsksVolSumMap() *OBRecordMap {
 	asksVolSumMap := newOBRecordMap(domains.QuoteAsk, p.symbol.TickSize())
 	sumVol := decimal.Zero
 	p.AsksMap.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
@@ -229,31 +229,31 @@ func (p *OrderBook) CalculateAsksVolSumMap() *OBRecordMap {
 	return asksVolSumMap
 }
 
-func (p *OrderBook) SetUpdateCallback(callback func()) {
+func (p *OrderBookImpl) SetUpdateCallback(callback func()) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.updateCallback = append(p.updateCallback, callback)
 }
 
-func (p *OrderBook) getUpdateCallback() []func() {
+func (p *OrderBookImpl) getUpdateCallback() []func() {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.updateCallback
 }
 
-func (p *OrderBook) SetDeferUpdateCallBack(callback func()) {
+func (p *OrderBookImpl) SetDeferUpdateCallBack(callback func()) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.deferCallback = callback
 }
 
-func (p *OrderBook) getDeferUpdateCallback() func() {
+func (p *OrderBookImpl) getDeferUpdateCallback() func() {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.deferCallback
 }
 
-func (p *OrderBook) DropDeferUpdateCallBack() {
+func (p *OrderBookImpl) DropDeferUpdateCallBack() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.deferCallback = func() {}

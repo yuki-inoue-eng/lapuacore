@@ -11,9 +11,9 @@ import (
 )
 
 // dealerInstances is a per-symbol singleton registry.
-var dealerInstances = map[*domains.Symbol]*Dealer{}
+var dealerInstances = map[*domains.Symbol]*DealerImpl{}
 
-type Dealer struct {
+type DealerImpl struct {
 	sync.RWMutex
 	acceptOrder     *mutex.Flag // When false, no new orders are accepted (e.g., on critical error).
 	onError         func(err error)
@@ -32,13 +32,18 @@ type Dealer struct {
 	posUpdatedHandlers []PositionDataHandler
 }
 
-// NewDealer returns the Dealer for the given symbol, creating it if it does not exist.
-func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *Dealer {
+func (d *DealerImpl) GetSymbol() *domains.Symbol         { return d.Symbol }
+func (d *DealerImpl) GetLivingOrders() *OrdersMutexMap     { return d.LivingOrders }
+func (d *DealerImpl) GetUnrelatedOrders() *OrdersMutexMap  { return d.UnrelatedOrders }
+func (d *DealerImpl) GetCurrentPosition() *Position        { return d.CurrentPosition }
+
+// NewDealer returns the DealerImpl for the given symbol, creating it if it does not exist.
+func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *DealerImpl {
 	if ins, exists := dealerInstances[symbol]; exists {
 		return ins
 	}
 
-	ins := &Dealer{
+	ins := &DealerImpl{
 		acceptOrder:       mutex.NewFlag(true),
 		onError:           onError,
 		agent:             agent,
@@ -53,7 +58,7 @@ func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *De
 	return ins
 }
 
-func (d *Dealer) SendOrder(order *Order) error {
+func (d *DealerImpl) SendOrder(order *Order) error {
 	if !d.acceptOrder.Get() {
 		return errors.New("dealer does not accept order")
 	}
@@ -75,7 +80,7 @@ func (d *Dealer) SendOrder(order *Order) error {
 	return nil
 }
 
-func (d *Dealer) SendOrders(orders []*Order) error {
+func (d *DealerImpl) SendOrders(orders []*Order) error {
 	if !d.acceptOrder.Get() {
 		return errors.New("dealer does not accept order")
 	}
@@ -102,26 +107,26 @@ func (d *Dealer) SendOrders(orders []*Order) error {
 	return nil
 }
 
-func SendOrder(dealer *Dealer, order *Order) {
+func SendOrder(dealer Dealer, order *Order) {
 	if err := dealer.SendOrder(order); err != nil {
-		slog.Error("failed to send order", err.Error(), dealer.Symbol.ID())
+		slog.Error("failed to send order", err.Error(), dealer.GetSymbol().ID())
 	}
 }
 
-func SendOrders(dealer *Dealer, orders []*Order) {
+func SendOrders(dealer Dealer, orders []*Order) {
 	if err := dealer.SendOrders(orders); err != nil {
-		slog.Error("failed to send orders", err.Error(), dealer.Symbol.ID())
+		slog.Error("failed to send orders", err.Error(), dealer.GetSymbol().ID())
 	}
 }
 
 // AmendOrders is reserved for future use when a supported exchange becomes available.
-func (d *Dealer) AmendOrders(_ map[*Order]AmendDetail) error {
+func (d *DealerImpl) AmendOrders(_ map[*Order]AmendDetail) error {
 	return nil
 }
 
 // AmendOrder amends the order with the given detail.
 // If the order is currently being sent or amended, the amend is deferred to the operation's completion callback.
-func (d *Dealer) AmendOrder(order *Order, detail AmendDetail) error {
+func (d *DealerImpl) AmendOrder(order *Order, detail AmendDetail) error {
 	if !d.acceptOrder.Get() {
 		return errors.New("dealer does not accept order")
 	}
@@ -161,7 +166,7 @@ func (d *Dealer) AmendOrder(order *Order, detail AmendDetail) error {
 	return nil
 }
 
-func (d *Dealer) amendOrder(order *Order, detail AmendDetail) error {
+func (d *DealerImpl) amendOrder(order *Order, detail AmendDetail) error {
 	if o := d.LivingOrders.getOrder(order.GetID()); o == nil {
 		order.execAmendRejectOrderNotExistCallbacks()
 		return nil
@@ -191,18 +196,18 @@ func (d *Dealer) amendOrder(order *Order, detail AmendDetail) error {
 	return nil
 }
 
-func AmendOrder(dealer *Dealer, order *Order, detail AmendDetail) {
+func AmendOrder(dealer Dealer, order *Order, detail AmendDetail) {
 	if order == nil {
-		slog.Error("failed to amend order", "order is nil", dealer.Symbol.ID())
+		slog.Error("failed to amend order", "order is nil", dealer.GetSymbol().ID())
 		return
 	}
 	if err := dealer.AmendOrder(order, detail); err != nil {
-		slog.Error("failed to amend order:", err.Error(), dealer.Symbol.ID())
+		slog.Error("failed to amend order:", err.Error(), dealer.GetSymbol().ID())
 	}
 }
 
 // CancelOrder cancels an order. If the order is being sent or amended, the cancel is deferred to the callback.
-func (d *Dealer) CancelOrder(order *Order) error {
+func (d *DealerImpl) CancelOrder(order *Order) error {
 	cb := func(o *Order) {
 		if err := d.cancelOrder(o); err != nil {
 			slog.Error("failed to cancel order", err.Error(), d.Symbol.ID())
@@ -222,7 +227,7 @@ func (d *Dealer) CancelOrder(order *Order) error {
 	return nil
 }
 
-func (d *Dealer) cancelOrder(order *Order) error {
+func (d *DealerImpl) cancelOrder(order *Order) error {
 	if order.GetStatus() == OrderStatusCanceling {
 		return nil
 	}
@@ -239,7 +244,7 @@ func (d *Dealer) cancelOrder(order *Order) error {
 }
 
 // CancelOrders cancels multiple orders. Defers cancellation for orders that are being sent or amended.
-func (d *Dealer) CancelOrders(orders Orders) error {
+func (d *DealerImpl) CancelOrders(orders Orders) error {
 	orders = orders.Unique()
 
 	cb := func(o *Order) {
@@ -287,26 +292,26 @@ func (d *Dealer) CancelOrders(orders Orders) error {
 	return nil
 }
 
-func CancelOrder(dealer *Dealer, order *Order) {
+func CancelOrder(dealer Dealer, order *Order) {
 	if order == nil {
 		return
 	}
 	if err := dealer.CancelOrder(order); err != nil {
-		slog.Error("failed to cancel order", err.Error(), dealer.Symbol.ID())
+		slog.Error("failed to cancel order", err.Error(), dealer.GetSymbol().ID())
 	}
 }
 
-func CancelOrders(dealer *Dealer, orders []*Order) {
+func CancelOrders(dealer Dealer, orders []*Order) {
 	if len(orders) == 0 {
 		return
 	}
 	if err := dealer.CancelOrders(orders); err != nil {
-		slog.Error("failed to cancel orders", err.Error(), dealer.Symbol.ID())
+		slog.Error("failed to cancel orders", err.Error(), dealer.GetSymbol().ID())
 	}
 }
 
 // ExportDoneOrders exports completed orders and resets the internal slice.
-func (d *Dealer) ExportDoneOrders() *OrderMutexSlice {
+func (d *DealerImpl) ExportDoneOrders() *OrderMutexSlice {
 	d.Lock()
 	defer d.Unlock()
 	doneOrders := d.doneOrders

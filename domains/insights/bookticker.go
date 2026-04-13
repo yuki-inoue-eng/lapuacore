@@ -19,7 +19,7 @@ type BookTickerData struct {
 	BestBid   *OBRecord
 }
 
-type BookTicker struct {
+type BookTickerImpl struct {
 	mu                    sync.RWMutex
 	muLockToUpdateHandler sync.Mutex
 	seqID                 int64
@@ -36,13 +36,13 @@ type BookTicker struct {
 	updateCallback []func()
 }
 
-func NewBookTicker(symbol *domains.Symbol) *BookTicker {
-	return &BookTicker{
+func NewBookTicker(symbol *domains.Symbol) *BookTickerImpl {
+	return &BookTickerImpl{
 		symbol: symbol,
 	}
 }
 
-func (bt *BookTicker) IsReady() bool {
+func (bt *BookTickerImpl) IsReady() bool {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.bestBid != nil && bt.bestAsk != nil &&
@@ -50,20 +50,20 @@ func (bt *BookTicker) IsReady() bool {
 		bt.lastArrivedAt != nil
 }
 
-func (bt *BookTicker) GetTickSize() decimal.Decimal {
+func (bt *BookTickerImpl) GetTickSize() decimal.Decimal {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.symbol.TickSize()
 }
 
-func (bt *BookTicker) setBestAsk(bestAsk *OBRecord) {
+func (bt *BookTickerImpl) setBestAsk(bestAsk *OBRecord) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.bestAsk = bestAsk
 }
 
 // CalcBestPrice calculates the Ask and Bid closest to the specified midPrice.
-func (bt *BookTicker) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
+func (bt *BookTickerImpl) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	tickSize := bt.symbol.TickSize()
@@ -72,25 +72,25 @@ func (bt *BookTicker) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, 
 	return bestAsk, bestBid
 }
 
-func (bt *BookTicker) GetBestAsk() *OBRecord {
+func (bt *BookTickerImpl) GetBestAsk() *OBRecord {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.bestAsk
 }
 
-func (bt *BookTicker) setBestBid(bestBid *OBRecord) {
+func (bt *BookTickerImpl) setBestBid(bestBid *OBRecord) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.bestBid = bestBid
 }
 
-func (bt *BookTicker) GetBestBid() *OBRecord {
+func (bt *BookTickerImpl) GetBestBid() *OBRecord {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.bestBid
 }
 
-func (bt *BookTicker) GetDiffBestAsk() *OBRecord {
+func (bt *BookTickerImpl) GetDiffBestAsk() *OBRecord {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return &OBRecord{
@@ -100,7 +100,7 @@ func (bt *BookTicker) GetDiffBestAsk() *OBRecord {
 	}
 }
 
-func (bt *BookTicker) GetDiffBestBid() *OBRecord {
+func (bt *BookTickerImpl) GetDiffBestBid() *OBRecord {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return &OBRecord{
@@ -110,73 +110,73 @@ func (bt *BookTicker) GetDiffBestBid() *OBRecord {
 	}
 }
 
-func (bt *BookTicker) setBeforeBestAsk(r *OBRecord) {
+func (bt *BookTickerImpl) setBeforeBestAsk(r *OBRecord) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.beforeBestAsk = r
 }
 
-func (bt *BookTicker) setBeforeBestBid(r *OBRecord) {
+func (bt *BookTickerImpl) setBeforeBestBid(r *OBRecord) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.beforeBestBid = r
 }
 
-func (bt *BookTicker) setLastExecAt(t *time.Time) {
+func (bt *BookTickerImpl) setLastExecAt(t *time.Time) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.lastExecAt = t
 }
 
-func (bt *BookTicker) setLastEventAt(t *time.Time) {
+func (bt *BookTickerImpl) setLastEventAt(t *time.Time) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.lastEventAt = t
 }
 
-func (bt *BookTicker) setLastArrivedAt(t *time.Time) {
+func (bt *BookTickerImpl) setLastArrivedAt(t *time.Time) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.lastArrivedAt = t
 }
 
-func (bt *BookTicker) GetLastExecAt() *time.Time {
+func (bt *BookTickerImpl) GetLastExecAt() *time.Time {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.lastExecAt
 }
 
-func (bt *BookTicker) GetLastEventAt() *time.Time {
+func (bt *BookTickerImpl) GetLastEventAt() *time.Time {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.lastEventAt
 }
 
-func (bt *BookTicker) GetLastArrivedAt() *time.Time {
+func (bt *BookTickerImpl) GetLastArrivedAt() *time.Time {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.lastArrivedAt
 }
 
-func (bt *BookTicker) setSeqID(id int64) {
+func (bt *BookTickerImpl) setSeqID(id int64) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.seqID = id
 }
 
-func (bt *BookTicker) GetSeqID() int64 {
+func (bt *BookTickerImpl) GetSeqID() int64 {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.seqID
 }
 
-func (bt *BookTicker) SetUpdateCallback(callback func()) {
+func (bt *BookTickerImpl) SetUpdateCallback(callback func()) {
 	bt.mu.Lock()
 	defer bt.mu.Unlock()
 	bt.updateCallback = append(bt.updateCallback, callback)
 }
 
-func (bt *BookTicker) getUpdateCallback() []func() {
+func (bt *BookTickerImpl) getUpdateCallback() []func() {
 	bt.mu.RLock()
 	defer bt.mu.RUnlock()
 	return bt.updateCallback
@@ -184,16 +184,16 @@ func (bt *BookTicker) getUpdateCallback() []func() {
 
 // RoundToTickSize rounds the given price down to the tick size
 // (i.e. truncates it to a multiple of tickSize).
-func (bt *BookTicker) RoundToTickSize(price decimal.Decimal) decimal.Decimal {
+func (bt *BookTickerImpl) RoundToTickSize(price decimal.Decimal) decimal.Decimal {
 	quotient := price.Div(bt.symbol.TickSize()).Truncate(0)
 	return quotient.Mul(bt.symbol.TickSize())
 }
 
-func (bt *BookTicker) GetMinOrderQty() decimal.Decimal {
+func (bt *BookTickerImpl) GetMinOrderQty() decimal.Decimal {
 	return bt.symbol.MinOrderQty()
 }
 
-func (bt *BookTicker) Update(msg *BookTickerData) {
+func (bt *BookTickerImpl) Update(msg *BookTickerData) {
 	bt.muLockToUpdateHandler.Lock()
 	defer bt.muLockToUpdateHandler.Unlock()
 

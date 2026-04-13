@@ -40,7 +40,7 @@ func orderBookHandlerMakeRecords(t *testing.T, levels []orderBookHandlerLevel) [
 	return out
 }
 
-func orderBookHandlerSeedBook(t *testing.T, book *OrderBook, asks []orderBookHandlerLevel, bids []orderBookHandlerLevel) {
+func orderBookHandlerSeedBook(t *testing.T, book *OrderBookImpl, asks []orderBookHandlerLevel, bids []orderBookHandlerLevel) {
 	t.Helper()
 
 	for _, r := range orderBookHandlerMakeRecords(t, asks) {

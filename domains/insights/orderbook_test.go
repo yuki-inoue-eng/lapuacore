@@ -39,7 +39,7 @@ func orderBookMakeRecords(t *testing.T, levels []orderBookTestLevel) []OBRecord 
 	return out
 }
 
-func orderBookSeedMaps(t *testing.T, book *OrderBook, asks []orderBookTestLevel, bids []orderBookTestLevel) {
+func orderBookSeedMaps(t *testing.T, book *OrderBookImpl, asks []orderBookTestLevel, bids []orderBookTestLevel) {
 	t.Helper()
 
 	for _, r := range orderBookMakeRecords(t, asks) {

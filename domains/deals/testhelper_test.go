@@ -57,9 +57,9 @@ func (m *mockAgent) AmendOrders(s *domains.Symbol, ds map[*Order]AmendDetail, h 
 	return nil
 }
 
-// newTestDealer creates a Dealer without using the singleton registry.
-func newTestDealer(agent Agent) *Dealer {
-	return &Dealer{
+// newTestDealer creates a DealerImpl without using the singleton registry.
+func newTestDealer(agent Agent) *DealerImpl {
+	return &DealerImpl{
 		acceptOrder:       mutex.NewFlag(true),
 		onError:           func(err error) {},
 		agent:             agent,
