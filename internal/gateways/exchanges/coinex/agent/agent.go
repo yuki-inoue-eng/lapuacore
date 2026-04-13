@@ -21,6 +21,7 @@ import (
 type PrivateAPIAgent struct {
 	httpClient        *HttpClient
 	signer            *signer
+	rateLimiter       *rateLimiter
 	orderTranslator   *translators.OrderTranslator
 	opErrorTranslator *translators.OperationErrorTranslator
 
@@ -35,6 +36,7 @@ func NewPrivateAPIAgent(credential gateways.Credential) *PrivateAPIAgent {
 	return &PrivateAPIAgent{
 		httpClient:        NewHttpClient(),
 		signer:            newSigner(credential),
+		rateLimiter:       newRateLimiter(),
 		orderTranslator:   translators.NewOrderTranslator(),
 		opErrorTranslator: translators.NewOperationErrorTranslator(),
 
@@ -54,6 +56,9 @@ func (a *PrivateAPIAgent) Start(ctx context.Context) {
 func (a *PrivateAPIAgent) SendOrders(symbol *domains.Symbol, orders []*deals.Order, handler deals.CreateOrdersRespHandler) error {
 	if handler == nil {
 		return fmt.Errorf("handler is required")
+	}
+	if err := a.rateLimiter.consume(GroupOrder, len(orders)); err != nil {
+		return err
 	}
 	listDto := a.orderTranslator.TranslateToListDto(symbol, orders)
 	ordersJson, err := json.Marshal(listDto)
@@ -115,6 +120,9 @@ func (a *PrivateAPIAgent) SendOrder(symbol *domains.Symbol, order *deals.Order, 
 	if handler == nil {
 		return fmt.Errorf("handler is required")
 	}
+	if err := a.rateLimiter.consume(GroupOrder, 1); err != nil {
+		return err
+	}
 	orderDto := a.orderTranslator.TranslateToDto(symbol, order)
 	orderJson, err := json.Marshal(orderDto)
 	if err != nil {
@@ -160,6 +168,9 @@ func (a *PrivateAPIAgent) SendOrder(symbol *domains.Symbol, order *deals.Order, 
 func (a *PrivateAPIAgent) CancelOrders(symbol *domains.Symbol, orders []*deals.Order, handler deals.CancelOrdersRespHandler) error {
 	if handler == nil {
 		return fmt.Errorf("handler is required")
+	}
+	if err := a.rateLimiter.consume(GroupCancel, len(orders)); err != nil {
+		return err
 	}
 	var pIDs []int
 	for i := range orders {
@@ -224,6 +235,9 @@ func (a *PrivateAPIAgent) CancelOrder(symbol *domains.Symbol, order *deals.Order
 	if handler == nil {
 		return fmt.Errorf("handler is required")
 	}
+	if err := a.rateLimiter.consume(GroupCancel, 1); err != nil {
+		return err
+	}
 	pID, err := strconv.Atoi(order.GetPublicID())
 	if err != nil {
 		return fmt.Errorf("failed to convert public_id: %v", err)
@@ -269,6 +283,9 @@ func (a *PrivateAPIAgent) CancelOrder(symbol *domains.Symbol, order *deals.Order
 func (a *PrivateAPIAgent) AmendOrder(symbol *domains.Symbol, order *deals.Order, amendDetail deals.AmendDetail, handler deals.AmendOrderRespHandler) error {
 	if handler == nil {
 		return fmt.Errorf("handler is required")
+	}
+	if err := a.rateLimiter.consume(GroupOrder, 1); err != nil {
+		return err
 	}
 	amendDetailDto, err := a.orderTranslator.TranslateToAmendDetailDto(symbol, order.GetPublicID(), &amendDetail)
 	if err != nil {
