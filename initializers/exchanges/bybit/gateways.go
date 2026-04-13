@@ -42,11 +42,9 @@ type GatewayManager struct {
 // InitGatewayManager initializes the Bybit gateway manager.
 // publicChannelCount controls the number of redundant public WebSocket connections.
 // Must be called after lapua.InitAndStart (requires lapua.Exporter).
+// If cred is nil, only public channels are initialized (no private channel or API agent).
 func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
-	if cred == nil {
-		panic(fmt.Errorf("credential must not be nil (simulator mode is not yet supported)"))
-	}
 	if lapua.Exporter == nil {
 		panic(fmt.Errorf("lapua.Exporter must be initialized before calling InitGatewayManager"))
 	}
@@ -56,20 +54,7 @@ func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	latencyMeasurer := gateways.NewLatencyMeasurer(aggInterval)
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
-	// initialize private channel
-	privateAPIAgent := agent.NewPrivateAPIAgent(cred, latencyMeasurer)
-	privateTopicMg := topics.NewManager()
-	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
-	privateChannel.SetTopicMg(privateTopicMg)
-
-	// initialize public channel group
-	publicLinearChGroup := ws.NewPublicChannelGroup(
-		latencyMeasurer,
-		publicChannelCount,
-		defaultDedupTTL,
-	)
-
-	gatewayManager = &GatewayManager{
+	gm := &GatewayManager{
 		cred:            cred,
 		latencyMeasurer: latencyMeasurer,
 
@@ -77,13 +62,24 @@ func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 		posTopic:          topics.NewPositionTopic(),
 		orderBookTopicMap: map[*OrderBookDesignator]*topics.OrderBookTopic{},
 		tradeTopicMap:     map[*domains.Symbol]*topics.TradeTopic{},
-
-		privateTopicMg: privateTopicMg,
-
-		privateChannel:      privateChannel,
-		publicLinearChGroup: publicLinearChGroup,
-		privateAPIAgent:     privateAPIAgent,
 	}
+
+	// initialize private channel (only when credentials are provided)
+	if cred != nil {
+		gm.privateAPIAgent = agent.NewPrivateAPIAgent(cred, latencyMeasurer)
+		gm.privateTopicMg = topics.NewManager()
+		gm.privateChannel = ws.NewPrivateChannel(cred, latencyMeasurer)
+		gm.privateChannel.SetTopicMg(gm.privateTopicMg)
+	}
+
+	// initialize public channel group
+	gm.publicLinearChGroup = ws.NewPublicChannelGroup(
+		latencyMeasurer,
+		publicChannelCount,
+		defaultDedupTTL,
+	)
+
+	gatewayManager = gm
 }
 
 func (m *GatewayManager) setDeals(deals *bybitDeals) {
