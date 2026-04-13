@@ -43,6 +43,19 @@ func (m *Map[K, V]) Set(key K, value V) {
 	m.mm[key] = value
 }
 
+// SetIfAbsent sets the value only if the key does not already exist.
+// Returns the existing value and true if the key was present, or the zero value and false if newly inserted.
+func (m *Map[K, V]) SetIfAbsent(key K, value V) (V, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if existing, ok := m.mm[key]; ok {
+		return existing, true
+	}
+	m.mm[key] = value
+	var zero V
+	return zero, false
+}
+
 func (m *Map[K, V]) Get(key K) (V, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

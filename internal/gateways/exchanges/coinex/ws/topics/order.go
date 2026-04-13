@@ -55,6 +55,22 @@ func (t *OrderTopic) SubscribeMsg() []byte {
 	}`, t.symbol.Name(), msgID))
 }
 
+// MessageID returns order_id:updated_at as a unique identifier.
+func (t *OrderTopic) MessageID(rawMsg []byte) string {
+	msg := struct {
+		Data struct {
+			Order struct {
+				OrderID   int64 `json:"order_id"`
+				UpdatedAt int64 `json:"updated_at"`
+			} `json:"order"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil || msg.Data.Order.OrderID == 0 {
+		return ""
+	}
+	return fmt.Sprintf("order:%d:%d", msg.Data.Order.OrderID, msg.Data.Order.UpdatedAt)
+}
+
 func (t *OrderTopic) MsgHandler(timestamp *time.Time, rawMsg []byte) error {
 	msgDto := &dtos.OrderMsgDto{}
 	if err := json.Unmarshal(rawMsg, msgDto); err != nil {

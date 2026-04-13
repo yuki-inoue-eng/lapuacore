@@ -65,3 +65,46 @@ func TestOrderBookStream(t *testing.T) {
 		t.Fatalf("channel error: %v", err)
 	}
 }
+
+func TestChannelGroupAllTopics(t *testing.T) {
+	var tradeCount, obCount int64
+	group := gateways.NewChannelGroup(
+		3,
+		func() *gateways.Channel { return ws.NewPublicChannel(ws.ProductLinear, nil) },
+		func() gateways.TopicManager { return topics.NewManager() },
+		10*time.Second,
+	)
+
+	tradeTopic := topics.NewTradeTopic(domains.SymbolBybitLinearBTCUSDT)
+	tradeTopic.SetHandler(func(msg insights.TradeDataList) {
+		for _, d := range msg {
+			tradeCount++
+			fmt.Printf("[trade] #%d [%s] side=%s price=%s volume=%s execAt=%s\n",
+				tradeCount, d.ArrivedAt.Format("15:04:05.000"), d.Side, d.Price.String(), d.Volume.String(),
+				d.ExecAt.Format("15:04:05.000"))
+		}
+	})
+
+	obTopic := topics.NewOrderBookTopic(domains.SymbolBybitLinearBTCUSDT, topics.LinearOBDepth1)
+	obTopic.SetHandler(func(data *insights.OrderBookData) {
+		obCount++
+		bestAsk := "N/A"
+		bestBid := "N/A"
+		if len(data.Asks) > 0 {
+			bestAsk = data.Asks[0].Price.String()
+		}
+		if len(data.Bids) > 0 {
+			bestBid = data.Bids[0].Price.String()
+		}
+		fmt.Printf("[ob]    #%d [%s] type=%v seqID=%d bestAsk=%s bestBid=%s\n",
+			obCount, data.ArrivedAt.Format("15:04:05.000"), data.Type, data.SeqID, bestAsk, bestBid)
+	})
+
+	group.SetTopics([]gateways.Topic{tradeTopic, obTopic})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	group.Start(ctx)
+	fmt.Printf("\ntotal: trade=%d orderbook=%d\n", tradeCount, obCount)
+}

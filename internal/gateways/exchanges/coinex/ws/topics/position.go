@@ -46,6 +46,23 @@ func (t *PositionTopic) SubscribeMsg() []byte {
 	return []byte(fmt.Sprintf(`{"method":"position.subscribe","params":{"market_list":["%s"]},"id":%d}`, t.symbol.Name(), id))
 }
 
+// MessageID returns market:side:updated_at as a unique identifier.
+func (t *PositionTopic) MessageID(rawMsg []byte) string {
+	msg := struct {
+		Data struct {
+			Position struct {
+				Market    string `json:"market"`
+				Side      string `json:"side"`
+				UpdatedAt int64  `json:"updated_at"`
+			} `json:"position"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil || msg.Data.Position.Market == "" {
+		return ""
+	}
+	return fmt.Sprintf("pos:%s:%s:%d", msg.Data.Position.Market, msg.Data.Position.Side, msg.Data.Position.UpdatedAt)
+}
+
 func (t *PositionTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {
 	msgDto := &dtos.PositionMsgDto{}
 	if err := json.Unmarshal(rawMsg, msgDto); err != nil {
