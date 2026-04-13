@@ -28,8 +28,8 @@ type Quote interface {
 // It excludes UpdateByOBData which is only used by internal gateways.
 type OrderBook interface {
 	Quote
-	SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal
-	AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal
+	SumVolume(bookSide domains.BookSide, price decimal.Decimal) decimal.Decimal
+	AvgExecPrice(bookSide domains.BookSide, qty decimal.Decimal) decimal.Decimal
 	AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) decimal.Decimal
 	CalculateBidsVolSumMap() *PriceLevelMap
 	CalculateAsksVolSumMap() *PriceLevelMap

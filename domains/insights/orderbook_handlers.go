@@ -101,7 +101,7 @@ func (p *OrderBookImpl) resetBySnapshot(snapshot *OrderBookData) {
 
 	// Reset asks
 	if len(snapshot.Asks) > 0 {
-		askMap := newPriceLevelMap(domains.QuoteAsk, p.symbol.TickSize())
+		askMap := newPriceLevelMap(domains.BookSideAsk, p.symbol.TickSize())
 		for _, a := range snapshot.Asks {
 			askMap.set(a)
 		}
@@ -118,7 +118,7 @@ func (p *OrderBookImpl) resetBySnapshot(snapshot *OrderBookData) {
 
 	// Reset bids
 	if len(snapshot.Bids) > 0 {
-		bidMap := newPriceLevelMap(domains.QuoteBid, p.symbol.TickSize())
+		bidMap := newPriceLevelMap(domains.BookSideBid, p.symbol.TickSize())
 		for _, a := range snapshot.Bids {
 			bidMap.set(a)
 		}

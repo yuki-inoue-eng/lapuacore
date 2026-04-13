@@ -14,20 +14,20 @@ import (
 type PriceLevelMap struct {
 	mu   sync.RWMutex
 	ts   decimal.Decimal // tickSize
-	q    domains.Quote
+	q    domains.BookSide
 	tree *btree.BTreeG[PriceLevel]
 }
 
-func newPriceLevelMap(quote domains.Quote, tickSize decimal.Decimal) *PriceLevelMap {
+func newPriceLevelMap(bookSide domains.BookSide, tickSize decimal.Decimal) *PriceLevelMap {
 	less := func(a, b PriceLevel) bool {
-		if quote == domains.QuoteBid {
+		if bookSide == domains.BookSideBid {
 			return a.Price.GreaterThan(b.Price)
 		}
 		return a.Price.LessThan(b.Price)
 	}
 	return &PriceLevelMap{
 		ts:   tickSize,
-		q:    quote,
+		q:    bookSide,
 		tree: btree.NewG(16, less),
 	}
 }
@@ -96,10 +96,10 @@ func (p *PriceLevelMap) BestLevel() PriceLevel {
 func (p *PriceLevelMap) SumVolume(price decimal.Decimal) decimal.Decimal {
 	sumVol := decimal.Zero
 	p.SortedRange(func(itaPrice decimal.Decimal, itaRecord PriceLevel) bool {
-		if p.q == domains.QuoteAsk && itaPrice.GreaterThan(price) {
+		if p.q == domains.BookSideAsk && itaPrice.GreaterThan(price) {
 			return false
 		}
-		if p.q == domains.QuoteBid && itaPrice.LessThan(price) {
+		if p.q == domains.BookSideBid && itaPrice.LessThan(price) {
 			return false
 		}
 		sumVol = sumVol.Add(itaRecord.Volume)
