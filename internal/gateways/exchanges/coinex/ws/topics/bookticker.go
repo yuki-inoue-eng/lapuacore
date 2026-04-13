@@ -16,7 +16,7 @@ type BookTickerTopic struct {
 	name            string
 	symbol          *domains.Symbol
 	btMsgTranslator *translators.BookTickerMsgTranslator
-	dataHandlers    []insights.BookTickerDataHandler
+	dataHandlers    []insights.QuoteDataHandler
 	msgID           string
 }
 
@@ -28,7 +28,7 @@ func NewBookTickerTopic(symbol *domains.Symbol) *BookTickerTopic {
 	}
 }
 
-func (t *BookTickerTopic) SetHandler(handler insights.BookTickerDataHandler) {
+func (t *BookTickerTopic) SetHandler(handler insights.QuoteDataHandler) {
 	t.dataHandlers = append(t.dataHandlers, handler)
 }
 

@@ -18,7 +18,7 @@ var Insights *bybitInsights
 type bybitInsights struct {
 	trades      map[*domains.Symbol]*insights.TradeImpl
 	orderBooks  map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBookImpl
-	bookTickers map[*domains.Symbol]*insights.BookTickerImpl
+	quotes map[*domains.Symbol]*insights.QuoteImpl
 }
 
 func (i *bybitInsights) EXName() string {
@@ -45,8 +45,8 @@ func (i *bybitInsights) GetTrade(symbol *domains.Symbol) insights.Trade {
 	return tr
 }
 
-func (i *bybitInsights) GetBookTicker(symbol *domains.Symbol) insights.BookTicker {
-	bt, ok := i.bookTickers[symbol]
+func (i *bybitInsights) GetQuote(symbol *domains.Symbol) insights.Quote {
+	bt, ok := i.quotes[symbol]
 	if !ok {
 		return nil
 	}
@@ -61,7 +61,7 @@ func (i *bybitInsights) IsEverythingReady() bool {
 			}
 		}
 	}
-	for _, bt := range i.bookTickers {
+	for _, bt := range i.quotes {
 		if !bt.IsReady() {
 			return false
 		}
@@ -113,12 +113,12 @@ func InitInsights(
 		linearOBTopics = append(linearOBTopics, obTopic)
 	}
 
-	// setup bookTickers (via orderbook depth=1 adapter)
-	bookTickers := map[*domains.Symbol]*insights.BookTickerImpl{}
+	// setup quotes (via orderbook depth=1 adapter)
+	quotes := map[*domains.Symbol]*insights.QuoteImpl{}
 	adapter := translators.NewBookTickerAdapter()
 	for _, symbol := range btSymbols {
-		bt := insights.NewBookTicker(symbol)
-		bookTickers[symbol] = bt
+		bt := insights.NewQuote(symbol)
+		quotes[symbol] = bt
 
 		designator := &OrderBookDesignator{Symbol: symbol, Depth: topics.LinearOBDepth1}
 		obTopic := gatewayManager.getOrderBookTopic(designator)
@@ -142,7 +142,7 @@ func InitInsights(
 	ins := &bybitInsights{
 		trades:      trades,
 		orderBooks:  orderBooks,
-		bookTickers: bookTickers,
+		quotes: quotes,
 	}
 	gatewayManager.setInsights(ins)
 	Insights = ins
