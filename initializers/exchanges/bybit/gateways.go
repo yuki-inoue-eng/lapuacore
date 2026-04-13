@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/yuki-inoue-eng/lapuacore/domains"
+	"github.com/yuki-inoue-eng/lapuacore/initializers/lapua"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/agent"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws/topics"
-	"github.com/yuki-inoue-eng/lapuacore/metrics"
 )
 
 const defaultDedupTTL = 10 * time.Second
@@ -20,7 +20,6 @@ var gatewayManager *GatewayManager
 // GatewayManager orchestrates Bybit exchange connectivity.
 type GatewayManager struct {
 	cred            gateways.Credential
-	exporter        *metrics.Exporter
 	latencyMeasurer *gateways.LatencyMeasurer
 
 	insights *bybitInsights
@@ -34,39 +33,44 @@ type GatewayManager struct {
 
 	privateTopicMg *topics.Manager
 
-	privateChannel        *gateways.Channel
-	publicLinearChGroup   *gateways.ChannelGroup
+	privateChannel      *gateways.Channel
+	publicLinearChGroup *gateways.ChannelGroup
 
 	privateAPIAgent *agent.PrivateAPIAgent
 }
 
 // InitGatewayManager initializes the Bybit gateway manager.
 // publicChannelCount controls the number of redundant public WebSocket connections.
-func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter, publicChannelCount int) {
+// Must be called after lapua.InitAndStart (requires lapua.Exporter).
+func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
-
 	if cred == nil {
 		panic(fmt.Errorf("credential must not be nil (simulator mode is not yet supported)"))
 	}
-	if exporter == nil {
-		panic(fmt.Errorf("exporter must not be nil"))
+	if lapua.Exporter == nil {
+		panic(fmt.Errorf("lapua.Exporter must be initialized before calling InitGatewayManager"))
 	}
+	exporter := lapua.Exporter
 
+	// initialize and set up ws latency measurer
 	latencyMeasurer := gateways.NewLatencyMeasurer(aggInterval)
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
+	// initialize private channel
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred, latencyMeasurer)
-
 	privateTopicMg := topics.NewManager()
-
 	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
 	privateChannel.SetTopicMg(privateTopicMg)
 
-	publicLinearChGroup := ws.NewPublicChannelGroup(ws.ProductLinear, latencyMeasurer, publicChannelCount, defaultDedupTTL)
+	// initialize public channel group
+	publicLinearChGroup := ws.NewPublicChannelGroup(
+		latencyMeasurer,
+		publicChannelCount,
+		defaultDedupTTL,
+	)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
-		exporter:        exporter,
 		latencyMeasurer: latencyMeasurer,
 
 		orderTopic:        topics.NewOrderTopic(),
@@ -76,9 +80,9 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter, pu
 
 		privateTopicMg: privateTopicMg,
 
-		privateChannel:        privateChannel,
-		publicLinearChGroup:   publicLinearChGroup,
-		privateAPIAgent:       privateAPIAgent,
+		privateChannel:      privateChannel,
+		publicLinearChGroup: publicLinearChGroup,
+		privateAPIAgent:     privateAPIAgent,
 	}
 }
 
