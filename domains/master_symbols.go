@@ -10,28 +10,22 @@ const (
 	ProductLinear  = "linear"
 )
 
-var defaultFeeRatePercent = map[string]float64{
-	ExchangeUnknown: 0.00,
-	ExchangeCoinEx:  0.03,
-	ExchangeBybit:   0.055,
-}
-
 // ここに各取引所のシンボルを追加していく。
 
 var (
-	SymbolUnknown = newSymbol(ExchangeUnknown, ProductUnknown, "Unknown", 0, 0, AssetUnknown, nil)
+	SymbolUnknown = newSymbol(ExchangeUnknown, ProductUnknown, "Unknown", 0, 0, AssetUnknown)
 
 	// ------------------ CoinEx ------------------
 
-	SymbolCoinExFuturesBTCUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "BTCUSDT", 0.01, 0.0001, AssetUSDT, nil)
-	SymbolCoinExFuturesETHUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "ETHUSDT", 0.01, 0.005, AssetUSDT, nil)
-	SymbolCoinExFuturesXRPUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "XRPUSDT", 0.0001, 5, AssetUSDT, nil)
-	SymbolCoinExFuturesSOLUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "SOLUSDT", 0.01, 0.05, AssetUSDT, nil)
+	SymbolCoinExFuturesBTCUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "BTCUSDT", 0.01, 0.0001, AssetUSDT)
+	SymbolCoinExFuturesETHUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "ETHUSDT", 0.01, 0.005, AssetUSDT)
+	SymbolCoinExFuturesXRPUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "XRPUSDT", 0.0001, 5, AssetUSDT)
+	SymbolCoinExFuturesSOLUSDT = newSymbol(ExchangeCoinEx, ProductFutures, "SOLUSDT", 0.01, 0.05, AssetUSDT)
 
 	// ------------------ Bybit ------------------
 
-	SymbolBybitLinearBTCUSDT = newSymbol(ExchangeBybit, ProductLinear, "BTCUSDT", 0.1, 0.001, AssetUSDT, nil)
-	SymbolBybitLinearETHUSDT = newSymbol(ExchangeBybit, ProductLinear, "ETHUSDT", 0.01, 0.01, AssetUSDT, nil)
-	SymbolBybitLinearSOLUSDT = newSymbol(ExchangeBybit, ProductLinear, "SOLUSDT", 0.001, 0.1, AssetUSDT, nil)
-	SymbolBybitLinearXRPUSDT = newSymbol(ExchangeBybit, ProductLinear, "XRPUSDT", 0.0001, 10, AssetUSDT, nil)
+	SymbolBybitLinearBTCUSDT = newSymbol(ExchangeBybit, ProductLinear, "BTCUSDT", 0.1, 0.001, AssetUSDT)
+	SymbolBybitLinearETHUSDT = newSymbol(ExchangeBybit, ProductLinear, "ETHUSDT", 0.01, 0.01, AssetUSDT)
+	SymbolBybitLinearSOLUSDT = newSymbol(ExchangeBybit, ProductLinear, "SOLUSDT", 0.001, 0.1, AssetUSDT)
+	SymbolBybitLinearXRPUSDT = newSymbol(ExchangeBybit, ProductLinear, "XRPUSDT", 0.0001, 10, AssetUSDT)
 )
