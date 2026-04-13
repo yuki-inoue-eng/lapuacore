@@ -17,7 +17,7 @@ func NewBookTickerMsgTranslator() *BookTickerMsgTranslator {
 func (t *BookTickerMsgTranslator) Translate(
 	arrivedAt time.Time,
 	msg *dtos.BookTickerMsgDto,
-) (*insights.BookTickerData, error) {
+) (*insights.QuoteData, error) {
 	seqID := msg.Data.Ts
 	ts := time.UnixMilli(msg.Data.Ts)
 	asks, err := t.translateRecord(seqID, msg.Data.AskPrice, msg.Data.AskSize)
@@ -28,7 +28,7 @@ func (t *BookTickerMsgTranslator) Translate(
 	if err != nil {
 		return nil, err
 	}
-	return &insights.BookTickerData{
+	return &insights.QuoteData{
 		SeqID:     seqID,
 		ExecAt:    ts,
 		EventAt:   ts,

@@ -7,8 +7,10 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
 
-// BestPriceProvider provides best price information.
-type BestPriceProvider interface {
+// Quote provides best price information.
+// Both OrderBookImpl and QuoteImpl implement this interface.
+type Quote interface {
+	IsReady() bool
 	CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
 	GetBestAsk() *OBRecord
 	GetBestBid() *OBRecord
@@ -25,8 +27,7 @@ type BestPriceProvider interface {
 // OrderBook is the consumer-facing interface for order book data.
 // It excludes UpdateByOBData which is only used by internal gateways.
 type OrderBook interface {
-	BestPriceProvider
-	IsReady() bool
+	Quote
 	SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal
 	AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal
 	AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) decimal.Decimal
@@ -34,15 +35,6 @@ type OrderBook interface {
 	CalculateAsksVolSumMap() *OBRecordMap
 	SetDeferUpdateCallBack(callback func())
 	DropDeferUpdateCallBack()
-}
-
-// BookTicker is the consumer-facing interface for book ticker data.
-// It excludes Update which is only used by internal gateways.
-type BookTicker interface {
-	BestPriceProvider
-	IsReady() bool
-	GetLastEventAt() *time.Time
-	GetSeqID() int64
 }
 
 // Trade is the consumer-facing interface for trade data.

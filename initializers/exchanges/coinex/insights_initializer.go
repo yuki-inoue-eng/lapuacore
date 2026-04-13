@@ -15,7 +15,7 @@ var Insights *coinexInsights
 type coinexInsights struct {
 	trades      map[*domains.Symbol]*insights.TradeImpl
 	orderBooks  map[*domains.Symbol]*insights.OrderBookImpl
-	bookTickers map[*domains.Symbol]*insights.BookTickerImpl
+	quotes map[*domains.Symbol]*insights.QuoteImpl
 }
 
 func (i *coinexInsights) EXName() string {
@@ -38,8 +38,8 @@ func (i *coinexInsights) GetTrade(symbol *domains.Symbol) insights.Trade {
 	return tr
 }
 
-func (i *coinexInsights) GetBookTicker(symbol *domains.Symbol) insights.BookTicker {
-	bt, ok := i.bookTickers[symbol]
+func (i *coinexInsights) GetQuote(symbol *domains.Symbol) insights.Quote {
+	bt, ok := i.quotes[symbol]
 	if !ok {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (i *coinexInsights) IsEverythingReady() bool {
 			return false
 		}
 	}
-	for _, bt := range i.bookTickers {
+	for _, bt := range i.quotes {
 		if !bt.IsReady() {
 			return false
 		}
@@ -100,15 +100,15 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 		_ = symbol // used as map key
 	}
 
-	// setup bookTickers
-	bookTickers := map[*domains.Symbol]*insights.BookTickerImpl{}
+	// setup quotes
+	quotes := map[*domains.Symbol]*insights.QuoteImpl{}
 	for _, symbol := range btSymbols {
-		bookTickers[symbol] = insights.NewBookTicker(symbol)
+		quotes[symbol] = insights.NewQuote(symbol)
 	}
 
 	// setup bookTicker topics
 	var btTopics []gateways.Topic
-	for symbol, bt := range bookTickers {
+	for symbol, bt := range quotes {
 		btTopic := topics.NewBookTickerTopic(symbol)
 		btTopic.SetHandler(bt.Update)
 		btTopics = append(btTopics, btTopic)
@@ -125,7 +125,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	ins := &coinexInsights{
 		trades:      trades,
 		orderBooks:  orderBooks,
-		bookTickers: bookTickers,
+		quotes: quotes,
 	}
 	gatewayManager.setInsights(ins)
 	Insights = ins
