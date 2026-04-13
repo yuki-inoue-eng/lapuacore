@@ -19,6 +19,17 @@ func (t *sideTranslator) Translate(msg string) domains.Side {
 	}
 }
 
+func (t *sideTranslator) TranslateFromLongShort(msg string) domains.Side {
+	switch msg {
+	case "long":
+		return domains.SideBuy
+	case "short":
+		return domains.SideSell
+	default:
+		return domains.SideNone
+	}
+}
+
 func (t *sideTranslator) TranslateToDto(side domains.Side) string {
 	switch side {
 	case domains.SideBuy:

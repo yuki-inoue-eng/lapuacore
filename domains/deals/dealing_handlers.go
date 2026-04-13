@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
 
@@ -21,6 +22,7 @@ type CancelOrderRespHandler func(resp CancelOrderResp, err error)
 // Handler types for WebSocket callbacks.
 
 type OrderDataHandler func(msg []*OrderData)
+type PositionDataHandler func(msg []*PositionData)
 
 func (d *Dealer) handleSendOrdersResp(resps CreateOrdersRespMap, err error) {
 	orders := d.LivingOrders.getSendingOrders(resps.IDs())
@@ -339,6 +341,60 @@ func (d *Dealer) rejectCancels(orders []*Order) {
 func (d *Dealer) rejectCancel(order *Order) {
 	order.setStatus(OrderStatusPending)
 	order.execCancelRejectCallbacks()
+}
+
+// HandlePositionData processes position updates received via WebSocket.
+func (d *Dealer) HandlePositionData(datas []*PositionData) {
+	data, err := d.extractPositionData(datas)
+	if err != nil {
+		slog.Error(err.Error())
+		slog.Info(fmt.Sprintf("invalid position data: %v", datas))
+		return
+	}
+
+	dataTs := data.Timestamp
+	lastUpdateAt := d.CurrentPosition.getLastUpdateAt()
+	if dataTs.After(lastUpdateAt) || dataTs.Equal(lastUpdateAt) {
+		size := decimal.Zero
+		if data.Side == domains.SideBuy {
+			size = data.Qty
+		}
+		if data.Side == domains.SideSell {
+			size = data.Qty.Neg()
+		}
+		d.CurrentPosition.update(data.Timestamp, size)
+
+		for _, h := range d.posUpdatedHandlers {
+			h(datas)
+		}
+	}
+}
+
+// SetPosUpdatedHandler registers a callback invoked when position updates.
+func (d *Dealer) SetPosUpdatedHandler(handler PositionDataHandler) {
+	d.posUpdatedHandlers = append(d.posUpdatedHandlers, handler)
+}
+
+func (d *Dealer) extractPositionData(datas []*PositionData) (*PositionData, error) {
+	var oneWayDatas []*PositionData
+	var invalidDatas []*PositionData
+	for _, data := range datas {
+		if data.PositionMode == PositionModeOneWay {
+			oneWayDatas = append(oneWayDatas, data)
+		} else {
+			invalidDatas = append(invalidDatas, data)
+		}
+	}
+	if len(invalidDatas) > 0 {
+		return nil, errors.New("invalid position data: include invalid position data")
+	}
+	if len(oneWayDatas) >= 2 {
+		return nil, errors.New("invalid position data: more than one one-way position data")
+	}
+	if len(oneWayDatas) == 0 {
+		return nil, errors.New("invalid position data: no one-way position data")
+	}
+	return oneWayDatas[0], nil
 }
 
 func (d *Dealer) abandonOrder(order *Order) {
