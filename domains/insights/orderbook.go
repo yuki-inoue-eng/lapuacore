@@ -43,8 +43,8 @@ type OrderBookImpl struct {
 func NewOrderBook(symbol *domains.Symbol) *OrderBookImpl {
 	return &OrderBookImpl{
 		symbol:  symbol,
-		BidsMap: newPriceLevelMap(domains.QuoteBid, symbol.TickSize()),
-		AsksMap: newPriceLevelMap(domains.QuoteAsk, symbol.TickSize()),
+		BidsMap: newPriceLevelMap(domains.BookSideBid, symbol.TickSize()),
+		AsksMap: newPriceLevelMap(domains.BookSideAsk, symbol.TickSize()),
 	}
 }
 
@@ -171,11 +171,11 @@ func (p *OrderBookImpl) GetMinOrderQty() decimal.Decimal {
 // the limit order resting at the specified price.
 // If the specified price is already marketable and would have been executed,
 // it returns 0.
-func (p *OrderBookImpl) SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal {
-	switch quote {
-	case domains.QuoteAsk:
+func (p *OrderBookImpl) SumVolume(bookSide domains.BookSide, price decimal.Decimal) decimal.Decimal {
+	switch bookSide {
+	case domains.BookSideAsk:
 		return p.AsksMap.SumVolume(price)
-	case domains.QuoteBid:
+	case domains.BookSideBid:
 		return p.BidsMap.SumVolume(price)
 	default:
 		return decimal.Zero
@@ -185,11 +185,11 @@ func (p *OrderBookImpl) SumVolume(quote domains.Quote, price decimal.Decimal) de
 // AvgExecPrice returns the average execution price for a market order
 // with the specified quantity.
 // The result is rounded down to the order book tick size.
-func (p *OrderBookImpl) AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal {
-	switch quote {
-	case domains.QuoteAsk:
+func (p *OrderBookImpl) AvgExecPrice(bookSide domains.BookSide, qty decimal.Decimal) decimal.Decimal {
+	switch bookSide {
+	case domains.BookSideAsk:
 		return p.RoundToTickSize(p.AsksMap.AvgExecPrice(qty))
-	case domains.QuoteBid:
+	case domains.BookSideBid:
 		return p.RoundToTickSize(p.BidsMap.AvgExecPrice(qty))
 	default:
 		return decimal.Zero
@@ -208,7 +208,7 @@ func (p *OrderBookImpl) AvgExecPriceBySide(side domains.Side, qty decimal.Decima
 }
 
 func (p *OrderBookImpl) CalculateBidsVolSumMap() *PriceLevelMap {
-	bidsVolSumMap := newPriceLevelMap(domains.QuoteBid, p.symbol.TickSize())
+	bidsVolSumMap := newPriceLevelMap(domains.BookSideBid, p.symbol.TickSize())
 	sumVol := decimal.Zero
 	p.BidsMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		sumVol = sumVol.Add(record.Volume)
@@ -219,7 +219,7 @@ func (p *OrderBookImpl) CalculateBidsVolSumMap() *PriceLevelMap {
 }
 
 func (p *OrderBookImpl) CalculateAsksVolSumMap() *PriceLevelMap {
-	asksVolSumMap := newPriceLevelMap(domains.QuoteAsk, p.symbol.TickSize())
+	asksVolSumMap := newPriceLevelMap(domains.BookSideAsk, p.symbol.TickSize())
 	sumVol := decimal.Zero
 	p.AsksMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		sumVol = sumVol.Add(record.Volume)

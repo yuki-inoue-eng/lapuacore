@@ -47,12 +47,12 @@ func (s Side) DecimalSign() decimal.Decimal {
 	return decimal.NewFromInt(int64(s.Sign()))
 }
 
-type Quote int
+type BookSide int
 
 const (
-	QuoteNone Quote = iota
-	QuoteBid
-	QuoteAsk
+	BookSideNone BookSide = iota
+	BookSideBid
+	BookSideAsk
 )
 
 type OrderType int

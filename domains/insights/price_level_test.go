@@ -23,10 +23,10 @@ func mustDecimal(t *testing.T, s string) decimal.Decimal {
 	return d
 }
 
-func newTestPriceLevelMap(t *testing.T, quote domains.Quote, levels []testLevel) *PriceLevelMap {
+func newTestPriceLevelMap(t *testing.T, bookSide domains.BookSide, levels []testLevel) *PriceLevelMap {
 	t.Helper()
 
-	m := newPriceLevelMap(quote, mustDecimal(t, "0.1"))
+	m := newPriceLevelMap(bookSide, mustDecimal(t, "0.1"))
 	for i, lv := range levels {
 		m.set(PriceLevel{
 			SeqID:  int64(i + 1),
@@ -40,13 +40,13 @@ func newTestPriceLevelMap(t *testing.T, quote domains.Quote, levels []testLevel)
 func TestPriceLevelMap_ordering(t *testing.T) {
 	tests := []struct {
 		name   string
-		quote  domains.Quote
+		bookSide  domains.BookSide
 		levels []testLevel
 		want   []string
 	}{
 		{
 			name:  "ask sorts prices in ascending order",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "99", volume: "2"},
@@ -56,7 +56,7 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 		},
 		{
 			name:  "bid sorts prices in descending order",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "99", volume: "2"},
@@ -68,7 +68,7 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.bookSide, tt.levels)
 
 			var got []string
 			m.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
@@ -84,14 +84,14 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 func TestPriceLevelMap_SortedRange(t *testing.T) {
 	tests := []struct {
 		name       string
-		quote      domains.Quote
+		bookSide      domains.BookSide
 		levels     []testLevel
 		breakAfter int
 		want       []string
 	}{
 		{
 			name:  "ask iterates in ascending order",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "99", volume: "2"},
@@ -102,7 +102,7 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 		},
 		{
 			name:  "bid iterates in descending order",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "99", volume: "2"},
@@ -113,7 +113,7 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 		},
 		{
 			name:  "iteration stops when callback returns false",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "99", volume: "2"},
@@ -126,7 +126,7 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.bookSide, tt.levels)
 
 			var got []string
 			count := 0
@@ -144,14 +144,14 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 func TestPriceLevelMap_SumVolume(t *testing.T) {
 	tests := []struct {
 		name   string
-		quote  domains.Quote
+		bookSide  domains.BookSide
 		levels []testLevel
 		price  string
 		want   string
 	}{
 		{
 			name:  "ask returns cumulative volume up to the specified price",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
 				{price: "101", volume: "2"},
@@ -162,7 +162,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 		},
 		{
 			name:  "ask returns zero when the specified price is already fully marketable",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
 				{price: "101", volume: "2"},
@@ -173,7 +173,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 		},
 		{
 			name:  "bid returns cumulative volume up to the specified price",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
 				{price: "101", volume: "2"},
@@ -184,7 +184,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 		},
 		{
 			name:  "bid returns zero when the specified price is already fully marketable",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
 				{price: "101", volume: "2"},
@@ -197,7 +197,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.bookSide, tt.levels)
 
 			got := m.SumVolume(mustDecimal(t, tt.price))
 
@@ -209,14 +209,14 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 	tests := []struct {
 		name   string
-		quote  domains.Quote
+		bookSide  domains.BookSide
 		levels []testLevel
 		qty    string
 		want   string
 	}{
 		{
 			name:  "ask returns average execution price",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
 				{price: "101", volume: "2"},
@@ -227,7 +227,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 		},
 		{
 			name:  "bid returns average execution price",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
 				{price: "101", volume: "2"},
@@ -238,7 +238,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 		},
 		{
 			name:  "returns average execution price when qty exactly matches total available volume",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
 				{price: "101", volume: "2"},
@@ -250,7 +250,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.bookSide, tt.levels)
 
 			got := m.AvgExecPrice(mustDecimal(t, tt.qty))
 
@@ -262,14 +262,14 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 func TestPriceLevelMap_BestLevel(t *testing.T) {
 	tests := []struct {
 		name  string
-		quote domains.Quote
+		bookSide domains.BookSide
 		setup []testLevel
 		drop  string
 		want  string
 	}{
 		{
 			name:  "ask returns the lowest price as best",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			setup: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "100", volume: "2"},
@@ -279,7 +279,7 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 		},
 		{
 			name:  "bid returns the highest price as best",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			setup: []testLevel{
 				{price: "101", volume: "1"},
 				{price: "100", volume: "2"},
@@ -289,7 +289,7 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 		},
 		{
 			name:  "recalculates best record after dropping current best",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			setup: []testLevel{
 				{price: "100", volume: "1"},
 				{price: "101", volume: "2"},
@@ -301,7 +301,7 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestPriceLevelMap(t, tt.quote, tt.setup)
+			m := newTestPriceLevelMap(t, tt.bookSide, tt.setup)
 
 			if tt.drop != "" {
 				m.drop(mustDecimal(t, tt.drop))

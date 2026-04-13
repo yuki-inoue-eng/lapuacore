@@ -135,7 +135,7 @@ func TestOrderBook_CalcBestPrice(t *testing.T) {
 func TestOrderBook_AvgExecPrice(t *testing.T) {
 	tests := []struct {
 		name  string
-		quote domains.Quote
+		bookSide domains.BookSide
 		asks  []orderBookTestLevel
 		bids  []orderBookTestLevel
 		qty   string
@@ -143,7 +143,7 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 	}{
 		{
 			name:  "ask side average execution price is rounded down to tick size",
-			quote: domains.QuoteAsk,
+			bookSide: domains.BookSideAsk,
 			asks: []orderBookTestLevel{
 				{seqID: 1, price: "100", volume: "1"},
 				{seqID: 1, price: "101", volume: "2"},
@@ -153,7 +153,7 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 		},
 		{
 			name:  "bid side average execution price is rounded down to tick size",
-			quote: domains.QuoteBid,
+			bookSide: domains.BookSideBid,
 			bids: []orderBookTestLevel{
 				{seqID: 1, price: "102", volume: "1"},
 				{seqID: 1, price: "101", volume: "2"},
@@ -162,8 +162,8 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 			want: "101.33",
 		},
 		{
-			name:  "returns zero for an unknown quote",
-			quote: domains.QuoteNone,
+			name:  "returns zero for an unknown book side",
+			bookSide: domains.BookSideNone,
 			qty:   "3",
 			want:  "0",
 		},
@@ -174,7 +174,7 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 			book := NewOrderBook(domains.SymbolCoinExFuturesBTCUSDT)
 			orderBookSeedMaps(t, book, tt.asks, tt.bids)
 
-			got := book.AvgExecPrice(tt.quote, orderBookMustDecimal(t, tt.qty))
+			got := book.AvgExecPrice(tt.bookSide, orderBookMustDecimal(t, tt.qty))
 
 			assert.Equal(t, true, got.Equal(orderBookMustDecimal(t, tt.want)))
 		})
