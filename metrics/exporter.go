@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
@@ -16,6 +17,7 @@ const (
 )
 
 type Exporter struct {
+	mu           sync.Mutex
 	noopMode     bool
 	strategyName string
 	bucketClient *influxdb3.Client
@@ -24,7 +26,8 @@ type Exporter struct {
 	latencyTranslator *translators.LatencyTranslator
 
 	// components for collection
-	latencyMeasurer []*gateways.LatencyMeasurer
+	latencyMeasurer    []*gateways.LatencyMeasurer
+	customMetricQueue  []*measurements.CustomMetric
 }
 
 // NewExporter initializes a metrics exporter.
@@ -53,6 +56,13 @@ func (c *Exporter) SetLatencyMeasurer(measurer *gateways.LatencyMeasurer) {
 	c.latencyMeasurer = append(c.latencyMeasurer, measurer)
 }
 
+// WriteCustomMetrics enqueues user-defined metrics for periodic export to InfluxDB.
+func (c *Exporter) WriteCustomMetrics(metrics []*measurements.CustomMetric) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.customMetricQueue = append(c.customMetricQueue, metrics...)
+}
+
 func (c *Exporter) Start(ctx context.Context) {
 	exportTicker := time.NewTicker(exportInterval)
 	defer exportTicker.Stop()
@@ -63,9 +73,11 @@ func (c *Exporter) Start(ctx context.Context) {
 		case <-exportTicker.C:
 			if c.noopMode {
 				c.discardWSLatencies()
+				c.discardCustomMetrics()
 				continue
 			}
 			c.collectAndExportLatencies(ctx)
+			c.collectAndExportCustomMetrics(ctx)
 		}
 	}
 }
@@ -76,10 +88,28 @@ func (c *Exporter) discardWSLatencies() {
 	}
 }
 
+func (c *Exporter) discardCustomMetrics() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.customMetricQueue = nil
+}
+
 func (c *Exporter) collectAndExportLatencies(ctx context.Context) {
 	go func() {
 		latencies := c.collectLatencies()
 		if err := c.exportLatencies(ctx, latencies); err != nil {
+			slog.Error(err.Error())
+		}
+	}()
+}
+
+func (c *Exporter) collectAndExportCustomMetrics(ctx context.Context) {
+	go func() {
+		c.mu.Lock()
+		metrics := c.customMetricQueue
+		c.customMetricQueue = nil
+		c.mu.Unlock()
+		if err := c.exportCustomMetrics(ctx, metrics); err != nil {
 			slog.Error(err.Error())
 		}
 	}()
@@ -98,6 +128,22 @@ func (c *Exporter) exportLatencies(ctx context.Context, latencies measurements.L
 		return nil
 	}
 	if err := c.bucketClient.WritePoints(ctx, latencies.ToPoints(c.strategyName)...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Exporter) exportCustomMetrics(ctx context.Context, metrics []*measurements.CustomMetric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+	var points []*influxdb3.Point
+	for _, m := range metrics {
+		if point := m.ToPoint(c.strategyName); point != nil {
+			points = append(points, point)
+		}
+	}
+	if err := c.bucketClient.WritePoints(ctx, points...); err != nil {
 		return err
 	}
 	return nil
