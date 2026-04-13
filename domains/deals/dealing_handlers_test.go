@@ -225,13 +225,13 @@ func TestHandleAmendOrderResp(t *testing.T) {
 func TestHandleOrderData(t *testing.T) {
 	tests := []struct {
 		name           string
-		setup          func(d *Dealer) []*Order
+		setup          func(d *DealerImpl) []*Order
 		data           func(orders []*Order) []*OrderData
-		check          func(t *testing.T, d *Dealer, orders []*Order)
+		check          func(t *testing.T, d *DealerImpl, orders []*Order)
 	}{
 		{
 			name: "Filled: moves order to doneOrders with DoneReasonFilled",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				o := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
 				dealerAddLivingOrder(d, o, OrderStatusPending)
 				return []*Order{o}
@@ -239,7 +239,7 @@ func TestHandleOrderData(t *testing.T) {
 			data: func(orders []*Order) []*OrderData {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, orders []*Order) {
+			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
 				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
 				assert.Equal(t, OrderDoneReasonFilled, *orders[0].GetOrderDoneReason())
 				assert.Equal(t, true, d.LivingOrders.getOrder(orders[0].GetID()) == nil)
@@ -248,7 +248,7 @@ func TestHandleOrderData(t *testing.T) {
 		},
 		{
 			name: "Filled: executes fill callback",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				o := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
 				dealerAddLivingOrder(d, o, OrderStatusPending)
 				return []*Order{o}
@@ -256,7 +256,7 @@ func TestHandleOrderData(t *testing.T) {
 			data: func(orders []*Order) []*OrderData {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, orders []*Order) {
+			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
 				called := make(chan struct{}, 1)
 				orders[0].fillCallbacks = []OrderCallback{func(_ *Order) { called <- struct{}{} }}
 				d.HandleOrderData([]*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}})
@@ -269,7 +269,7 @@ func TestHandleOrderData(t *testing.T) {
 		},
 		{
 			name: "PartiallyFilled LimitIOC: moves order to doneOrders",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				o := NewLimitIOCOrder(
 					decimal.RequireFromString("100"), decimal.Zero,
 					decimal.RequireFromString("0.01"), domains.SideBuy, "",
@@ -280,7 +280,7 @@ func TestHandleOrderData(t *testing.T) {
 			data: func(orders []*Order) []*OrderData {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusPartiallyFilled, CumExecQty: decimal.RequireFromString("0.005"), ArrivedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, orders []*Order) {
+			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
 				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
 				assert.Equal(t, OrderDoneReasonPartiallyFilledAndCanceled, *orders[0].GetOrderDoneReason())
 				assert.Equal(t, 1, d.doneOrders.Len())
@@ -288,7 +288,7 @@ func TestHandleOrderData(t *testing.T) {
 		},
 		{
 			name: "PartiallyFilled Limit: does not change status",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				o := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
 				dealerAddLivingOrder(d, o, OrderStatusPending)
 				return []*Order{o}
@@ -296,7 +296,7 @@ func TestHandleOrderData(t *testing.T) {
 			data: func(orders []*Order) []*OrderData {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusPartiallyFilled, CumExecQty: decimal.RequireFromString("0.005"), ArrivedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, orders []*Order) {
+			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
 				assert.Equal(t, OrderStatusPending, orders[0].GetStatus())
 				assert.Equal(t, 0, d.doneOrders.Len())
 			},
@@ -304,7 +304,7 @@ func TestHandleOrderData(t *testing.T) {
 		{
 			// Regression test for the return→continue bug fix.
 			name: "two Filled events in one batch: both are processed",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				o1 := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
 				o2 := dealerMakeLimitOrder("101", "0.01", domains.SideSell)
 				dealerAddLivingOrder(d, o1, OrderStatusPending)
@@ -317,7 +317,7 @@ func TestHandleOrderData(t *testing.T) {
 					{ID: orders[1].GetID(), Status: OrderDataStatusFilled, ArrivedAt: handlersNow()},
 				}
 			},
-			check: func(t *testing.T, d *Dealer, orders []*Order) {
+			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
 				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
 				assert.Equal(t, OrderStatusDone, orders[1].GetStatus())
 				assert.Equal(t, 2, d.doneOrders.Len())
@@ -325,19 +325,19 @@ func TestHandleOrderData(t *testing.T) {
 		},
 		{
 			name: "Unrelated Opened: added to UnrelatedOrders",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				return nil
 			},
 			data: func(_ []*Order) []*OrderData {
 				return []*OrderData{{ID: "", PublicID: "ext-001", Status: OrderDataStatusOpened, ArrivedAt: handlersNow(), ConfirmedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, _ []*Order) {
+			check: func(t *testing.T, d *DealerImpl, _ []*Order) {
 				assert.NotEqual(t, nil, d.UnrelatedOrders.getOrder("ext-001"))
 			},
 		},
 		{
 			name: "Unrelated Done: moved from UnrelatedOrders to doneOrders",
-			setup: func(d *Dealer) []*Order {
+			setup: func(d *DealerImpl) []*Order {
 				existing := &Order{publicID: "ext-001"}
 				d.UnrelatedOrders.Set("ext-001", existing)
 				return nil
@@ -345,7 +345,7 @@ func TestHandleOrderData(t *testing.T) {
 			data: func(_ []*Order) []*OrderData {
 				return []*OrderData{{ID: "", PublicID: "ext-001", Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}}
 			},
-			check: func(t *testing.T, d *Dealer, _ []*Order) {
+			check: func(t *testing.T, d *DealerImpl, _ []*Order) {
 				assert.Equal(t, true, d.UnrelatedOrders.getOrder("ext-001") == nil)
 				assert.Equal(t, 1, d.doneOrders.Len())
 			},

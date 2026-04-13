@@ -15,7 +15,7 @@ const (
 	DataTypeDelta
 )
 
-func (p *OrderBook) UpdateByOBData(data *OrderBookData) {
+func (p *OrderBookImpl) UpdateByOBData(data *OrderBookData) {
 	// Acquire the lock at the update-handler level so that
 	// the best price and the order book do not get out of sync.
 	p.muLockToUpdateHandler.Lock()
@@ -55,7 +55,7 @@ func (p *OrderBook) UpdateByOBData(data *OrderBookData) {
 	}
 }
 
-func (p *OrderBook) updateByDelta(delta *OrderBookData) {
+func (p *OrderBookImpl) updateByDelta(delta *OrderBookData) {
 	hasOldRecord := false
 
 	// Update asks
@@ -95,7 +95,7 @@ func (p *OrderBook) updateByDelta(delta *OrderBookData) {
 	}
 }
 
-func (p *OrderBook) resetBySnapshot(snapshot *OrderBookData) {
+func (p *OrderBookImpl) resetBySnapshot(snapshot *OrderBookData) {
 
 	hasOldRecord := false
 

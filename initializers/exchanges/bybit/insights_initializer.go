@@ -16,16 +16,16 @@ import (
 var Insights *bybitInsights
 
 type bybitInsights struct {
-	trades      map[*domains.Symbol]*insights.Trade
-	orderBooks  map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBook
-	bookTickers map[*domains.Symbol]*insights.BookTicker
+	trades      map[*domains.Symbol]*insights.TradeImpl
+	orderBooks  map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBookImpl
+	bookTickers map[*domains.Symbol]*insights.BookTickerImpl
 }
 
 func (i *bybitInsights) EXName() string {
 	return "bybit"
 }
 
-func (i *bybitInsights) GetOrderBook(designator *OrderBookDesignator) *insights.OrderBook {
+func (i *bybitInsights) GetOrderBook(designator *OrderBookDesignator) insights.OrderBook {
 	obs, ok := i.orderBooks[designator.Symbol]
 	if !ok {
 		return nil
@@ -37,7 +37,7 @@ func (i *bybitInsights) GetOrderBook(designator *OrderBookDesignator) *insights.
 	return ob
 }
 
-func (i *bybitInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
+func (i *bybitInsights) GetTrade(symbol *domains.Symbol) insights.Trade {
 	tr, ok := i.trades[symbol]
 	if !ok {
 		return nil
@@ -45,7 +45,7 @@ func (i *bybitInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
 	return tr
 }
 
-func (i *bybitInsights) GetBookTicker(symbol *domains.Symbol) *insights.BookTicker {
+func (i *bybitInsights) GetBookTicker(symbol *domains.Symbol) insights.BookTicker {
 	bt, ok := i.bookTickers[symbol]
 	if !ok {
 		return nil
@@ -80,7 +80,7 @@ func InitInsights(
 	}
 
 	// setup trades
-	trades := map[*domains.Symbol]*insights.Trade{}
+	trades := map[*domains.Symbol]*insights.TradeImpl{}
 	for _, symbol := range tradeSymbols {
 		trades[symbol] = insights.NewTrade(symbol)
 	}
@@ -94,11 +94,11 @@ func InitInsights(
 	}
 
 	// setup orderBooks
-	orderBooks := map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBook{}
+	orderBooks := map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBookImpl{}
 	for _, designator := range obDesignators {
 		orderBook := insights.NewOrderBook(designator.Symbol)
 		if orderBooks[designator.Symbol] == nil {
-			orderBooks[designator.Symbol] = map[topics.OBDepth]*insights.OrderBook{designator.Depth: orderBook}
+			orderBooks[designator.Symbol] = map[topics.OBDepth]*insights.OrderBookImpl{designator.Depth: orderBook}
 		} else {
 			orderBooks[designator.Symbol][designator.Depth] = orderBook
 		}
@@ -114,7 +114,7 @@ func InitInsights(
 	}
 
 	// setup bookTickers (via orderbook depth=1 adapter)
-	bookTickers := map[*domains.Symbol]*insights.BookTicker{}
+	bookTickers := map[*domains.Symbol]*insights.BookTickerImpl{}
 	adapter := translators.NewBookTickerAdapter()
 	for _, symbol := range btSymbols {
 		bt := insights.NewBookTicker(symbol)

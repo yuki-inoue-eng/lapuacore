@@ -12,10 +12,10 @@ import (
 var Deals *coinexDeals
 
 type coinexDeals struct {
-	dealers map[*domains.Symbol]*deals.Dealer
+	dealers map[*domains.Symbol]*deals.DealerImpl
 }
 
-func (d *coinexDeals) GetDealer(symbol *domains.Symbol) *deals.Dealer {
+func (d *coinexDeals) GetDealer(symbol *domains.Symbol) deals.Dealer {
 	dealer, ok := d.dealers[symbol]
 	if !ok {
 		return nil
@@ -30,7 +30,7 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	}
 
 	// setup dealers
-	dealers := map[*domains.Symbol]*deals.Dealer{}
+	dealers := map[*domains.Symbol]*deals.DealerImpl{}
 	for _, symbol := range symbols {
 		dealers[symbol] = deals.NewDealer(symbol, gatewayManager.privateAPIAgent, onError)
 	}

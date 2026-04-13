@@ -58,24 +58,24 @@ func (l TradeDataList) GetArrivedAt() time.Time {
 	return l[0].ArrivedAt
 }
 
-// Trade manages trade data updates for a symbol.
-type Trade struct {
+// TradeImpl manages trade data updates for a symbol.
+type TradeImpl struct {
 	symbol       *domains.Symbol
 	handlers     []TradeDataHandler
 	lastUpdateAt *time.Time
 }
 
-func NewTrade(symbol *domains.Symbol) *Trade {
-	return &Trade{
+func NewTrade(symbol *domains.Symbol) *TradeImpl {
+	return &TradeImpl{
 		symbol: symbol,
 	}
 }
 
-func (t *Trade) SetHandler(handler TradeDataHandler) {
+func (t *TradeImpl) SetHandler(handler TradeDataHandler) {
 	t.handlers = append(t.handlers, handler)
 }
 
-func (t *Trade) Update(msg TradeDataList) {
+func (t *TradeImpl) Update(msg TradeDataList) {
 	for _, handler := range t.handlers {
 		handler(msg)
 	}
@@ -83,6 +83,6 @@ func (t *Trade) Update(msg TradeDataList) {
 	t.lastUpdateAt = &ts
 }
 
-func (t *Trade) IsReady() bool {
+func (t *TradeImpl) IsReady() bool {
 	return t.lastUpdateAt != nil
 }

@@ -24,7 +24,7 @@ type CancelOrderRespHandler func(resp CancelOrderResp, err error)
 type OrderDataHandler func(msg []*OrderData)
 type PositionDataHandler func(msg []*PositionData)
 
-func (d *Dealer) handleSendOrdersResp(resps CreateOrdersRespMap, err error) {
+func (d *DealerImpl) handleSendOrdersResp(resps CreateOrdersRespMap, err error) {
 	orders := d.LivingOrders.getSendingOrders(resps.IDs())
 	if err != nil {
 		d.rejectCreates(orders)
@@ -40,7 +40,7 @@ func (d *Dealer) handleSendOrdersResp(resps CreateOrdersRespMap, err error) {
 
 // handleSendOrderResp processes the send order response.
 // If the order was already confirmed via WebSocket, it is ignored.
-func (d *Dealer) handleSendOrderResp(resp CreateOrderResp, err error) {
+func (d *DealerImpl) handleSendOrderResp(resp CreateOrderResp, err error) {
 	order := d.LivingOrders.getSendingOrder(resp.OrderID)
 	if order == nil {
 		return
@@ -74,7 +74,7 @@ func (d *Dealer) handleSendOrderResp(resp CreateOrderResp, err error) {
 	})
 }
 
-func (d *Dealer) handleAmendOrdersResp(resps AmendOrdersRespMap, err error) {
+func (d *DealerImpl) handleAmendOrdersResp(resps AmendOrdersRespMap, err error) {
 	orders := d.LivingOrders.getAmendingOrders(resps.IDs())
 	if err != nil {
 		d.rejectAmends(orders)
@@ -88,7 +88,7 @@ func (d *Dealer) handleAmendOrdersResp(resps AmendOrdersRespMap, err error) {
 	}
 }
 
-func (d *Dealer) handleAmendOrderResp(resp AmendOrderResp, err error) {
+func (d *DealerImpl) handleAmendOrderResp(resp AmendOrderResp, err error) {
 	order := d.LivingOrders.getAmendingOrder(resp.OrderID)
 	if order == nil {
 		return
@@ -118,7 +118,7 @@ func (d *Dealer) handleAmendOrderResp(resp AmendOrderResp, err error) {
 	})
 }
 
-func (d *Dealer) handleCancelOrdersResp(resps CancelOrdersRespMap, err error) {
+func (d *DealerImpl) handleCancelOrdersResp(resps CancelOrdersRespMap, err error) {
 	orders := d.LivingOrders.getCancelingOrders(resps.IDs())
 	if err != nil {
 		d.rejectCancels(orders)
@@ -134,7 +134,7 @@ func (d *Dealer) handleCancelOrdersResp(resps CancelOrdersRespMap, err error) {
 
 // handleCancelOrderResp processes the cancel order response.
 // If the order was already confirmed via WebSocket, it is ignored.
-func (d *Dealer) handleCancelOrderResp(resp CancelOrderResp, err error) {
+func (d *DealerImpl) handleCancelOrderResp(resp CancelOrderResp, err error) {
 	order := d.LivingOrders.getCancelingOrder(resp.OrderID)
 	if order == nil {
 		return
@@ -166,7 +166,7 @@ func (d *Dealer) handleCancelOrderResp(resp CancelOrderResp, err error) {
 
 // noticeError notifies errors via the onError callback.
 // For critical errors it also stops accepting new orders.
-func (d *Dealer) noticeError(err error) {
+func (d *DealerImpl) noticeError(err error) {
 	if errors.Is(err, InfoError) {
 		return
 	}
@@ -181,7 +181,7 @@ func (d *Dealer) noticeError(err error) {
 }
 
 // HandleOrderData processes order update events received via WebSocket.
-func (d *Dealer) HandleOrderData(datas []*OrderData) {
+func (d *DealerImpl) HandleOrderData(datas []*OrderData) {
 	for _, data := range datas {
 		if data.Status == OrderDataStatusUnknown {
 			slog.Info(fmt.Sprintf("unknown order status: %d", data.Status))
@@ -234,7 +234,7 @@ func (d *Dealer) HandleOrderData(datas []*OrderData) {
 	}
 }
 
-func (d *Dealer) setOrderFillInfo(order *Order, data *OrderData) {
+func (d *DealerImpl) setOrderFillInfo(order *Order, data *OrderData) {
 	order.setFilledAt(data.ArrivedAt)
 	order.setAvgPrice(data.AvgExecPrice)
 	order.setExecQty(data.CumExecQty)
@@ -245,14 +245,14 @@ func (d *Dealer) setOrderFillInfo(order *Order, data *OrderData) {
 	}
 }
 
-func (d *Dealer) setOrderPartiallyFillInfo(order *Order, data *OrderData) {
+func (d *DealerImpl) setOrderPartiallyFillInfo(order *Order, data *OrderData) {
 	order.setFilledAt(data.ArrivedAt)
 	order.setAvgPrice(data.AvgExecPrice)
 	order.setExecQty(data.CumExecQty)
 	order.setFee(data.CumFee)
 }
 
-func (d *Dealer) acceptFilled(order *Order) {
+func (d *DealerImpl) acceptFilled(order *Order) {
 	order.setStatus(OrderStatusDone)
 	order.setOrderDoneReason(OrderDoneReasonFilled)
 	d.LivingOrders.Delete(order.GetID())
@@ -260,7 +260,7 @@ func (d *Dealer) acceptFilled(order *Order) {
 	order.execFillCallbacks()
 }
 
-func (d *Dealer) acceptPartiallyFilled(order *Order) {
+func (d *DealerImpl) acceptPartiallyFilled(order *Order) {
 	if order.orderType == domains.OrderTypeLimitIOC {
 		order.setStatus(OrderStatusDone)
 		order.setOrderDoneReason(OrderDoneReasonPartiallyFilledAndCanceled)
@@ -270,7 +270,7 @@ func (d *Dealer) acceptPartiallyFilled(order *Order) {
 	}
 }
 
-func (d *Dealer) acceptAmend(order *Order, detail *AmendDetail, arrivedAt, confirmedAt *time.Time) {
+func (d *DealerImpl) acceptAmend(order *Order, detail *AmendDetail, arrivedAt, confirmedAt *time.Time) {
 	order.setStatus(OrderStatusPending)
 	order.setAmendingDetail(nil)
 	order.amend(detail)
@@ -279,7 +279,7 @@ func (d *Dealer) acceptAmend(order *Order, detail *AmendDetail, arrivedAt, confi
 	order.execAmendCallbacks()
 }
 
-func (d *Dealer) acceptCreate(order *Order, publicID string, arrivedAt, confirmedAt *time.Time) {
+func (d *DealerImpl) acceptCreate(order *Order, publicID string, arrivedAt, confirmedAt *time.Time) {
 	order.setStatus(OrderStatusPending)
 	if publicID != "" {
 		order.setPublicID(publicID)
@@ -289,7 +289,7 @@ func (d *Dealer) acceptCreate(order *Order, publicID string, arrivedAt, confirme
 	order.execCreateCallbacks()
 }
 
-func (d *Dealer) acceptCancel(order *Order) {
+func (d *DealerImpl) acceptCancel(order *Order) {
 	order.setStatus(OrderStatusDone)
 	order.setOrderDoneReason(OrderDoneReasonCanceled)
 	d.LivingOrders.Delete(order.GetID())
@@ -297,7 +297,7 @@ func (d *Dealer) acceptCancel(order *Order) {
 	order.execCancelCallbacks()
 }
 
-func (d *Dealer) rejectAmends(orders []*Order) {
+func (d *DealerImpl) rejectAmends(orders []*Order) {
 	for i := range orders {
 		order := orders[i]
 		order.WithOpLock(func() {
@@ -306,13 +306,13 @@ func (d *Dealer) rejectAmends(orders []*Order) {
 	}
 }
 
-func (d *Dealer) rejectAmend(order *Order) {
+func (d *DealerImpl) rejectAmend(order *Order) {
 	order.setStatus(OrderStatusPending)
 	order.setAmendingDetail(nil)
 	order.execAmendRejectCallbacks()
 }
 
-func (d *Dealer) rejectCreates(orders []*Order) {
+func (d *DealerImpl) rejectCreates(orders []*Order) {
 	for i := range orders {
 		order := orders[i]
 		order.WithOpLock(func() {
@@ -321,7 +321,7 @@ func (d *Dealer) rejectCreates(orders []*Order) {
 	}
 }
 
-func (d *Dealer) rejectCreate(order *Order) {
+func (d *DealerImpl) rejectCreate(order *Order) {
 	order.setStatus(OrderStatusDone)
 	order.setOrderDoneReason(OrderDoneReasonRejected)
 	d.LivingOrders.Delete(order.GetID())
@@ -329,7 +329,7 @@ func (d *Dealer) rejectCreate(order *Order) {
 	order.execCreateRejectCallbacks()
 }
 
-func (d *Dealer) rejectCancels(orders []*Order) {
+func (d *DealerImpl) rejectCancels(orders []*Order) {
 	for i := range orders {
 		order := orders[i]
 		order.WithOpLock(func() {
@@ -338,13 +338,13 @@ func (d *Dealer) rejectCancels(orders []*Order) {
 	}
 }
 
-func (d *Dealer) rejectCancel(order *Order) {
+func (d *DealerImpl) rejectCancel(order *Order) {
 	order.setStatus(OrderStatusPending)
 	order.execCancelRejectCallbacks()
 }
 
 // HandlePositionData processes position updates received via WebSocket.
-func (d *Dealer) HandlePositionData(datas []*PositionData) {
+func (d *DealerImpl) HandlePositionData(datas []*PositionData) {
 	data, err := d.extractPositionData(datas)
 	if err != nil {
 		slog.Error(err.Error())
@@ -371,11 +371,11 @@ func (d *Dealer) HandlePositionData(datas []*PositionData) {
 }
 
 // SetPosUpdatedHandler registers a callback invoked when position updates.
-func (d *Dealer) SetPosUpdatedHandler(handler PositionDataHandler) {
+func (d *DealerImpl) SetPosUpdatedHandler(handler PositionDataHandler) {
 	d.posUpdatedHandlers = append(d.posUpdatedHandlers, handler)
 }
 
-func (d *Dealer) extractPositionData(datas []*PositionData) (*PositionData, error) {
+func (d *DealerImpl) extractPositionData(datas []*PositionData) (*PositionData, error) {
 	var oneWayDatas []*PositionData
 	var invalidDatas []*PositionData
 	for _, data := range datas {
@@ -397,7 +397,7 @@ func (d *Dealer) extractPositionData(datas []*PositionData) (*PositionData, erro
 	return oneWayDatas[0], nil
 }
 
-func (d *Dealer) abandonOrder(order *Order) {
+func (d *DealerImpl) abandonOrder(order *Order) {
 	order.setStatus(OrderStatusDone)
 	order.setOrderDoneReason(OrderDoneReasonAbandoned)
 	order.setSentTimestamp(order.getLastOperatedTimestamp())

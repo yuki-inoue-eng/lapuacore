@@ -13,16 +13,16 @@ import (
 var Insights *coinexInsights
 
 type coinexInsights struct {
-	trades      map[*domains.Symbol]*insights.Trade
-	orderBooks  map[*domains.Symbol]*insights.OrderBook
-	bookTickers map[*domains.Symbol]*insights.BookTicker
+	trades      map[*domains.Symbol]*insights.TradeImpl
+	orderBooks  map[*domains.Symbol]*insights.OrderBookImpl
+	bookTickers map[*domains.Symbol]*insights.BookTickerImpl
 }
 
 func (i *coinexInsights) EXName() string {
 	return "coinex"
 }
 
-func (i *coinexInsights) GetOrderBook(symbol *domains.Symbol) *insights.OrderBook {
+func (i *coinexInsights) GetOrderBook(symbol *domains.Symbol) insights.OrderBook {
 	ob, ok := i.orderBooks[symbol]
 	if !ok {
 		return nil
@@ -30,7 +30,7 @@ func (i *coinexInsights) GetOrderBook(symbol *domains.Symbol) *insights.OrderBoo
 	return ob
 }
 
-func (i *coinexInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
+func (i *coinexInsights) GetTrade(symbol *domains.Symbol) insights.Trade {
 	tr, ok := i.trades[symbol]
 	if !ok {
 		return nil
@@ -38,7 +38,7 @@ func (i *coinexInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
 	return tr
 }
 
-func (i *coinexInsights) GetBookTicker(symbol *domains.Symbol) *insights.BookTicker {
+func (i *coinexInsights) GetBookTicker(symbol *domains.Symbol) insights.BookTicker {
 	bt, ok := i.bookTickers[symbol]
 	if !ok {
 		return nil
@@ -72,7 +72,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup trades
-	trades := map[*domains.Symbol]*insights.Trade{}
+	trades := map[*domains.Symbol]*insights.TradeImpl{}
 	for _, symbol := range tradeSymbols {
 		trades[symbol] = insights.NewTrade(symbol)
 	}
@@ -86,7 +86,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup orderBooks
-	orderBooks := map[*domains.Symbol]*insights.OrderBook{}
+	orderBooks := map[*domains.Symbol]*insights.OrderBookImpl{}
 	for _, symbol := range obSymbols {
 		orderBooks[symbol] = insights.NewOrderBook(symbol)
 	}
@@ -101,7 +101,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup bookTickers
-	bookTickers := map[*domains.Symbol]*insights.BookTicker{}
+	bookTickers := map[*domains.Symbol]*insights.BookTickerImpl{}
 	for _, symbol := range btSymbols {
 		bookTickers[symbol] = insights.NewBookTicker(symbol)
 	}
