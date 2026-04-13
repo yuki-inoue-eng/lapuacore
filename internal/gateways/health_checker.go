@@ -25,8 +25,8 @@ type healthChecker struct {
 	conn            *websocket.Conn
 	pingInterval    time.Duration
 	timeoutDuration time.Duration
-	lastSendPingAt  int64
-	lastReceivedAt  int64
+	lastSendPingAt  time.Time
+	lastReceivedAt  time.Time
 
 	sendPing  PingSender
 	matchPong PongMatcher
@@ -78,13 +78,13 @@ func (c *healthChecker) PongReceiveHandleFunc(rawMsg []byte) error {
 }
 
 func (c *healthChecker) isTimeout() bool {
-	if c.lastSendPingAt == 0 {
+	if c.lastSendPingAt.IsZero() {
 		return false
 	}
-	if c.lastReceivedAt == 0 {
-		return time.Since(time.Unix(c.lastSendPingAt, 0)) > c.timeoutDuration
+	if c.lastReceivedAt.IsZero() {
+		return time.Since(c.lastSendPingAt) > c.timeoutDuration
 	}
-	return time.Since(time.Unix(c.lastReceivedAt, 0)) > c.timeoutDuration
+	return time.Since(c.lastReceivedAt) > c.timeoutDuration
 }
 
 func (c *healthChecker) chanClose() {
@@ -106,12 +106,12 @@ func (c *healthChecker) Start(ctx context.Context) {
 			if err := c.sendPing(c.conn); err != nil {
 				c.healthAlertChan <- HealthErrFailedToSendPing
 			}
-			c.lastSendPingAt = time.Now().Unix()
+			c.lastSendPingAt = time.Now()
 			if c.isTimeout() {
 				c.healthAlertChan <- HealthErrConnectionTimeout
 			}
 		case <-c.pongChan:
-			c.lastReceivedAt = time.Now().Unix()
+			c.lastReceivedAt = time.Now()
 		}
 	}
 }

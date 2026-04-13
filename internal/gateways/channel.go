@@ -173,8 +173,8 @@ func (c *Channel) initialize() error {
 		authNumOfRetry    = 3
 		authRetryInterval = 1 * time.Second
 
-		pingInterval    = 1 * time.Second
-		timeoutDuration = 1 * time.Second
+		pingInterval    = 3 * time.Second
+		timeoutDuration = 3 * time.Second
 	)
 
 	// setup message receiver
