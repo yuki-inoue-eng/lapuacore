@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 go test ./...                        # Run all tests (also used in CI)
 go test ./domains/deals/...          # Run tests for a specific package
 go test -run TestSendOrder ./domains/deals/...  # Run a single test
-go test -tags=integration ./internal/gateways/exchanges/bybit/ws/  # Run integration tests (requires live API)
+go test -tags=integration ./internal/gateways/exchanges/bybit/ws/  # Run gateway-level integration tests (requires live API)
+go test -tags=integration ./integration_tests/                     # Run full-flow integration tests (requires live API + credentials)
 go mod tidy                          # Tidy dependencies (run before commits)
 ```
 
