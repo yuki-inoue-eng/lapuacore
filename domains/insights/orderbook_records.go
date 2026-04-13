@@ -13,7 +13,7 @@ type PriceLevelMap struct {
 	ts         decimal.Decimal // tickSize
 	q          domains.Quote
 	data       map[string]PriceLevel
-	bestRecord *PriceLevel
+	bestLevel *PriceLevel
 }
 
 func newPriceLevelMap(quote domains.Quote, tickSize decimal.Decimal) *PriceLevelMap {
@@ -29,7 +29,7 @@ func (p *PriceLevelMap) set(record PriceLevel) {
 	defer p.mu.Unlock()
 
 	p.data[record.Price.String()] = record
-	p.updateBestRecordOnSetLocked(record)
+	p.updateBestLevelOnSetLocked(record)
 }
 
 func (p *PriceLevelMap) Get(price decimal.Decimal) (PriceLevel, bool) {
@@ -45,8 +45,8 @@ func (p *PriceLevelMap) drop(price decimal.Decimal) {
 
 	delete(p.data, price.String())
 
-	if p.bestRecord != nil && p.bestRecord.Price.Equal(price) {
-		p.recalculateBestRecordLocked()
+	if p.bestLevel != nil && p.bestLevel.Price.Equal(price) {
+		p.recalculateBestLevelLocked()
 	}
 }
 
@@ -61,7 +61,7 @@ func (p *PriceLevelMap) replace(r *PriceLevelMap) {
 	defer p.mu.Unlock()
 
 	p.data = r.data
-	p.recalculateBestRecordLocked()
+	p.recalculateBestLevelLocked()
 }
 
 func (p *PriceLevelMap) Range(f func(price decimal.Decimal, record PriceLevel) bool) {
@@ -74,14 +74,14 @@ func (p *PriceLevelMap) Range(f func(price decimal.Decimal, record PriceLevel) b
 	}
 }
 
-func (p *PriceLevelMap) BestRecord() PriceLevel {
+func (p *PriceLevelMap) BestLevel() PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if p.bestRecord == nil {
+	if p.bestLevel == nil {
 		return PriceLevel{}
 	}
-	return *p.bestRecord.Copy()
+	return *p.bestLevel.Copy()
 }
 
 // SumVolume returns the total market order quantity required to fully execute
@@ -156,39 +156,39 @@ func (p *PriceLevelMap) sortedKeys() []decimal.Decimal {
 	return keys
 }
 
-func (p *PriceLevelMap) updateBestRecordOnSetLocked(record PriceLevel) {
+func (p *PriceLevelMap) updateBestLevelOnSetLocked(record PriceLevel) {
 	if record.Volume.IsZero() {
-		if p.bestRecord != nil && p.bestRecord.Price.Equal(record.Price) {
-			p.recalculateBestRecordLocked()
+		if p.bestLevel != nil && p.bestLevel.Price.Equal(record.Price) {
+			p.recalculateBestLevelLocked()
 		}
 		return
 	}
 
-	if p.bestRecord == nil {
-		p.bestRecord = record.Copy()
+	if p.bestLevel == nil {
+		p.bestLevel = record.Copy()
 		return
 	}
 
-	if p.bestRecord.Price.Equal(record.Price) {
-		p.bestRecord = record.Copy()
+	if p.bestLevel.Price.Equal(record.Price) {
+		p.bestLevel = record.Copy()
 		return
 	}
 
-	if p.isBetterPrice(record.Price, p.bestRecord.Price) {
-		p.bestRecord = record.Copy()
+	if p.isBetterPrice(record.Price, p.bestLevel.Price) {
+		p.bestLevel = record.Copy()
 	}
 }
 
-func (p *PriceLevelMap) recalculateBestRecordLocked() {
-	p.bestRecord = nil
+func (p *PriceLevelMap) recalculateBestLevelLocked() {
+	p.bestLevel = nil
 
 	for _, record := range p.data {
 		if record.Volume.IsZero() {
 			continue
 		}
 
-		if p.bestRecord == nil || p.isBetterPrice(record.Price, p.bestRecord.Price) {
-			p.bestRecord = record.Copy()
+		if p.bestLevel == nil || p.isBetterPrice(record.Price, p.bestLevel.Price) {
+			p.bestLevel = record.Copy()
 		}
 	}
 }

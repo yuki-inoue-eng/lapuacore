@@ -263,7 +263,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 	}
 }
 
-func TestPriceLevelMap_BestRecord(t *testing.T) {
+func TestPriceLevelMap_BestLevel(t *testing.T) {
 	tests := []struct {
 		name  string
 		quote domains.Quote
@@ -311,7 +311,7 @@ func TestPriceLevelMap_BestRecord(t *testing.T) {
 				m.drop(mustDecimal(t, tt.drop))
 			}
 
-			got := m.BestRecord()
+			got := m.BestLevel()
 			assert.Equal(t, tt.want, got.Price.String()+":"+got.Volume.String())
 		})
 	}
