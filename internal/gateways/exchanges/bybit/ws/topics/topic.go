@@ -1,9 +1,11 @@
 package topics
 
-import "time"
+// SubscribeMsgID and SubscribeMsg are not used by individual Bybit topics
+// because subscription is handled as a batch by the Manager.
+// These methods satisfy the gateways.Topic interface.
 
-// Topic is the interface for WebSocket channel topics.
-type Topic interface {
-	TopicName() string
-	MsgHandler(timestamp *time.Time, rawMsg []byte) error
-}
+// topicBase provides default no-op implementations for subscribe methods.
+type topicBase struct{}
+
+func (topicBase) SubscribeMsgID() string { return "" }
+func (topicBase) SubscribeMsg() []byte   { return nil }

@@ -33,6 +33,7 @@ const (
 )
 
 type OrderBookTopic struct {
+	topicBase
 	name            string
 	depth           OBDepth
 	symbol          *domains.Symbol

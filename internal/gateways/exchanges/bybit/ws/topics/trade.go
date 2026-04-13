@@ -12,6 +12,7 @@ import (
 )
 
 type TradeTopic struct {
+	topicBase
 	name               string
 	symbol             *domains.Symbol
 	tradeMsgTranslator *translators.TradeMsgTranslator

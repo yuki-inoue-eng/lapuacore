@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 )
 
 var (
@@ -31,7 +32,7 @@ type healthChecker struct {
 	healthAlertChan chan error
 }
 
-func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.Duration) *healthChecker {
+func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.Duration) gateways.HealthChecker {
 	pongChan := make(chan []byte)
 	conn.SetPongHandler(func(pongMsgStr string) error {
 		pongChan <- []byte(pongMsgStr)
@@ -49,6 +50,12 @@ func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.D
 
 func (c *healthChecker) GetHealthAlertChan() <-chan error {
 	return c.healthAlertChan
+}
+
+// PongReceiveHandleFunc is a no-op for Bybit since pongs are handled via
+// conn.SetPongHandler at the WebSocket level.
+func (c *healthChecker) PongReceiveHandleFunc(_ []byte) error {
+	return nil
 }
 
 func (c *healthChecker) sendPing() error {
@@ -82,7 +89,7 @@ func (c *healthChecker) chanClose() {
 	})
 }
 
-func (c *healthChecker) start(ctx context.Context) {
+func (c *healthChecker) Start(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 	defer c.chanClose()

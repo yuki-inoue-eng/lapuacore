@@ -4,6 +4,7 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
 	ex "github.com/yuki-inoue-eng/lapuacore/initializers/exchanges"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws/topics"
 )
 
@@ -77,7 +78,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup trade topics
-	var tradeTopics []topics.Topic
+	var tradeTopics []gateways.Topic
 	for symbol, trade := range trades {
 		tradeTopic := topics.NewTradeTopic(symbol)
 		tradeTopic.SetHandler(trade.Update)
@@ -91,7 +92,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup orderBook topics
-	var obTopics []topics.Topic
+	var obTopics []gateways.Topic
 	for symbol, ob := range orderBooks {
 		obTopic := topics.NewOrderBookTopic(symbol)
 		obTopic.SetHandler(ob.UpdateByOBData)
@@ -106,7 +107,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// setup bookTicker topics
-	var btTopics []topics.Topic
+	var btTopics []gateways.Topic
 	for symbol, bt := range bookTickers {
 		btTopic := topics.NewBookTickerTopic(symbol)
 		btTopic.SetHandler(bt.Update)
@@ -115,10 +116,10 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	}
 
 	// set topics on public channel
-	if gatewayManager.publicChannel != nil {
-		gatewayManager.publicChannel.SetTopics(tradeTopics)
-		gatewayManager.publicChannel.SetTopics(obTopics)
-		gatewayManager.publicChannel.SetTopics(btTopics)
+	if gatewayManager.publicTopicMg != nil {
+		gatewayManager.publicTopicMg.SetTopics(tradeTopics)
+		gatewayManager.publicTopicMg.SetTopics(obTopics)
+		gatewayManager.publicTopicMg.SetTopics(btTopics)
 	}
 
 	ins := &coinexInsights{

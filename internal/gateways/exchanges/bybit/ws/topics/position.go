@@ -11,6 +11,7 @@ import (
 )
 
 type PositionTopic struct {
+	topicBase
 	handlersMap      map[*domains.Symbol][]deals.PositionDataHandler
 	posMsgTranslator *translators.PositionMsgTranslator
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws/topics"
 )
@@ -17,6 +18,7 @@ import (
 func TestTradeStream(t *testing.T) {
 	ch := ws.NewPublicChannel(ws.ProductLinear, nil)
 
+	mg := topics.NewManager()
 	tradeTopic := topics.NewTradeTopic(domains.SymbolBybitLinearBTCUSDT)
 	tradeTopic.SetHandler(func(msg insights.TradeDataList) {
 		for _, d := range msg {
@@ -25,7 +27,8 @@ func TestTradeStream(t *testing.T) {
 				d.ExecAt.Format("15:04:05.000"))
 		}
 	})
-	ch.SetTopics([]topics.Topic{tradeTopic})
+	mg.SetTopics([]gateways.Topic{tradeTopic})
+	ch.SetTopicMg(mg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -38,6 +41,7 @@ func TestTradeStream(t *testing.T) {
 func TestOrderBookStream(t *testing.T) {
 	ch := ws.NewPublicChannel(ws.ProductLinear, nil)
 
+	mg := topics.NewManager()
 	obTopic := topics.NewOrderBookTopic(domains.SymbolBybitLinearBTCUSDT, topics.LinearOBDepth1)
 	obTopic.SetHandler(func(data *insights.OrderBookData) {
 		bestAsk := "N/A"
@@ -51,7 +55,8 @@ func TestOrderBookStream(t *testing.T) {
 		fmt.Printf("[%s] type=%v seqID=%d bestAsk=%s bestBid=%s\n",
 			data.ArrivedAt.Format("15:04:05.000"), data.Type, data.SeqID, bestAsk, bestBid)
 	})
-	ch.SetTopics([]topics.Topic{obTopic})
+	mg.SetTopics([]gateways.Topic{obTopic})
+	ch.SetTopicMg(mg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

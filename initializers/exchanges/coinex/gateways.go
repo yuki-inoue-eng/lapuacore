@@ -8,6 +8,7 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/agent"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws/topics"
 	"github.com/yuki-inoue-eng/lapuacore/metrics"
 )
 
@@ -22,8 +23,11 @@ type GatewayManager struct {
 	insights *coinexInsights
 	deals    *coinexDeals
 
-	publicChannel  *ws.Channel
-	privateChannel *ws.Channel
+	publicTopicMg  *topics.Manager
+	privateTopicMg *topics.Manager
+
+	publicChannel  *gateways.Channel
+	privateChannel *gateways.Channel
 
 	privateAPIAgent *agent.PrivateAPIAgent
 }
@@ -44,13 +48,23 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred)
-	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
+
+	publicTopicMg := topics.NewManager()
+	privateTopicMg := topics.NewManager()
+
 	publicChannel := ws.NewPublicChannel(latencyMeasurer)
+	publicChannel.SetTopicMg(publicTopicMg)
+
+	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
+	privateChannel.SetTopicMg(privateTopicMg)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
 		exporter:        exporter,
 		latencyMeasurer: latencyMeasurer,
+
+		publicTopicMg:  publicTopicMg,
+		privateTopicMg: privateTopicMg,
 
 		privateChannel:  privateChannel,
 		publicChannel:   publicChannel,

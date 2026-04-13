@@ -6,6 +6,7 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
 	ex "github.com/yuki-inoue-eng/lapuacore/initializers/exchanges"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/translators"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws/topics"
 )
@@ -85,7 +86,7 @@ func InitInsights(
 	}
 
 	// setup trade topics
-	var linearTradeTopics []topics.Topic
+	var linearTradeTopics []gateways.Topic
 	for symbol, trade := range trades {
 		tradeTopic := gatewayManager.getTradeTopic(symbol)
 		tradeTopic.SetHandler(trade.Update)
@@ -104,7 +105,7 @@ func InitInsights(
 	}
 
 	// setup orderBook topics
-	var linearOBTopics []topics.Topic
+	var linearOBTopics []gateways.Topic
 	for _, designator := range obDesignators {
 		orderBook := orderBooks[designator.Symbol][designator.Depth]
 		obTopic := gatewayManager.getOrderBookTopic(designator)
@@ -133,9 +134,9 @@ func InitInsights(
 	}
 
 	// set topics on public channel
-	if gatewayManager.publicLinearChannel != nil {
-		gatewayManager.publicLinearChannel.SetTopics(linearTradeTopics)
-		gatewayManager.publicLinearChannel.SetTopics(linearOBTopics)
+	if gatewayManager.publicTopicMg != nil {
+		gatewayManager.publicTopicMg.SetTopics(linearTradeTopics)
+		gatewayManager.publicTopicMg.SetTopics(linearOBTopics)
 	}
 
 	ins := &bybitInsights{
