@@ -16,7 +16,8 @@ const (
 	chanBT    = "bbo.update"   // bookticker
 	chanOB    = "depth.update" // orderbook
 	chanTrade = "deals.update" // trade
-	chanOrder = "order.update" // personal order
+	chanOrder = "order.update"    // personal order
+	chanPos   = "position.update" // personal position
 )
 
 type Manager struct {
@@ -98,10 +99,13 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 	msg := struct {
 		Method string `json:"method"`
 		Data   struct {
-			Symbol string `json:"market"`
-			Order  struct {
+			Symbol   string `json:"market"`
+			Order    struct {
 				Symbol string `json:"market"`
 			} `json:"order"`
+			Position struct {
+				Symbol string `json:"market"`
+			} `json:"position"`
 		} `json:"data"`
 	}{}
 	if err := json.Unmarshal(rawMsg, &msg); err != nil {
@@ -116,6 +120,8 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 		return fmt.Sprintf("trade@%s", msg.Data.Symbol), nil
 	case chanOrder:
 		return fmt.Sprintf("personal.order@%s", msg.Data.Order.Symbol), nil
+	case chanPos:
+		return fmt.Sprintf("personal.position@%s", msg.Data.Position.Symbol), nil
 	default:
 		return "", nil
 	}

@@ -68,5 +68,6 @@ func newTestDealer(agent Agent) *Dealer {
 		UnrelatedOrders:   NewOrdersMap(nil),
 		amendingDetailMap: mutex.NewMap[string, AmendDetail](nil),
 		doneOrders:        NewOrderMuArray(nil),
+		CurrentPosition:   NewPosition(),
 	}
 }

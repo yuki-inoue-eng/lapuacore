@@ -27,6 +27,9 @@ type Dealer struct {
 
 	// doneOrders retains completed orders until exported.
 	doneOrders *OrderMutexSlice
+
+	CurrentPosition    *Position
+	posUpdatedHandlers []PositionDataHandler
 }
 
 // NewDealer returns the Dealer for the given symbol, creating it if it does not exist.
@@ -44,6 +47,7 @@ func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *De
 		UnrelatedOrders:   NewOrdersMap(nil),
 		amendingDetailMap: mutex.NewMap[string, AmendDetail](nil),
 		doneOrders:        NewOrderMuArray(nil),
+		CurrentPosition:   NewPosition(),
 	}
 	dealerInstances[symbol] = ins
 	return ins

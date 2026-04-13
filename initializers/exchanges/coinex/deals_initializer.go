@@ -42,9 +42,18 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 		orderTopics = append(orderTopics, orderTopic)
 	}
 
+	// setup position topics
+	var posTopics []topics.Topic
+	for symbol, dealer := range dealers {
+		posTopic := topics.NewPositionTopic(symbol.Name())
+		posTopic.SetHandler(dealer.HandlePositionData)
+		posTopics = append(posTopics, posTopic)
+	}
+
 	// set topics on private channel
 	if gatewayManager.privateChannel != nil {
 		gatewayManager.privateChannel.SetTopics(orderTopics)
+		gatewayManager.privateChannel.SetTopics(posTopics)
 	}
 
 	dls := &coinexDeals{
