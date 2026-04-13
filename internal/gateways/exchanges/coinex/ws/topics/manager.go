@@ -10,30 +10,32 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 )
 
 const (
-	chanBT    = "bbo.update"   // bookticker
-	chanOB    = "depth.update" // orderbook
-	chanTrade = "deals.update" // trade
-	chanOrder = "order.update"    // personal order
-	chanPos   = "position.update" // personal position
+	chanBT    = "bbo.update"       // bookticker
+	chanOB    = "depth.update"     // orderbook
+	chanTrade = "deals.update"     // trade
+	chanOrder = "order.update"     // personal order
+	chanPos   = "position.update"  // personal position
 )
 
+// Manager implements gateways.TopicManager for CoinEx.
 type Manager struct {
 	mu       sync.RWMutex
-	topicMap map[string]Topic
+	topicMap map[string]gateways.Topic
 	msgIDMap map[string]string // maps subscribe message ID to topic name
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		topicMap: map[string]Topic{},
+		topicMap: map[string]gateways.Topic{},
 		msgIDMap: map[string]string{},
 	}
 }
 
-func (mg *Manager) SetTopics(ts []Topic) {
+func (mg *Manager) SetTopics(ts []gateways.Topic) {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
 	for _, t := range ts {
@@ -131,12 +133,12 @@ func (mg *Manager) MeasureLatency(rawMsg []byte) (string, time.Duration, error) 
 	now := time.Now()
 	msg := struct {
 		Data struct {
-			UpdatedAt int64 `json:"updated_at"` // unix timestamp in milliseconds (book ticker)
+			UpdatedAt int64 `json:"updated_at"`
 			Depth     struct {
-				UpdatedAt int64 `json:"updated_at"` // unix timestamp in milliseconds (order book)
+				UpdatedAt int64 `json:"updated_at"`
 			} `json:"depth"`
 			DealList []struct {
-				CreatedAt int64 `json:"created_at"` // unix timestamp in milliseconds (trade)
+				CreatedAt int64 `json:"created_at"`
 			} `json:"deal_list"`
 		} `json:"data"`
 	}{}

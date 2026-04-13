@@ -3,7 +3,7 @@ package bybit
 import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/deals"
-	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws/topics"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 )
 
 // Deals holds Bybit trading infrastructure.
@@ -45,8 +45,8 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	}
 
 	// set topics on private channel
-	if gatewayManager.privateChannel != nil {
-		gatewayManager.privateChannel.SetTopics([]topics.Topic{
+	if gatewayManager.privateTopicMg != nil {
+		gatewayManager.privateTopicMg.SetTopics([]gateways.Topic{
 			gatewayManager.orderTopic,
 			gatewayManager.posTopic,
 		})

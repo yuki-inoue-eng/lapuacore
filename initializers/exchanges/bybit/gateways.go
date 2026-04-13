@@ -30,8 +30,11 @@ type GatewayManager struct {
 	orderBookTopicMap map[*OrderBookDesignator]*topics.OrderBookTopic
 	tradeTopicMap     map[*domains.Symbol]*topics.TradeTopic
 
-	privateChannel     *ws.Channel
-	publicLinearChannel *ws.Channel
+	publicTopicMg  *topics.Manager
+	privateTopicMg *topics.Manager
+
+	privateChannel      *gateways.Channel
+	publicLinearChannel *gateways.Channel
 
 	privateAPIAgent *agent.PrivateAPIAgent
 }
@@ -51,8 +54,15 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred, latencyMeasurer)
+
+	publicTopicMg := topics.NewManager()
+	privateTopicMg := topics.NewManager()
+
 	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
+	privateChannel.SetTopicMg(privateTopicMg)
+
 	publicLinearChannel := ws.NewPublicChannel(ws.ProductLinear, latencyMeasurer)
+	publicLinearChannel.SetTopicMg(publicTopicMg)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
@@ -64,9 +74,12 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 		orderBookTopicMap: map[*OrderBookDesignator]*topics.OrderBookTopic{},
 		tradeTopicMap:     map[*domains.Symbol]*topics.TradeTopic{},
 
-		privateChannel:     privateChannel,
+		publicTopicMg:  publicTopicMg,
+		privateTopicMg: privateTopicMg,
+
+		privateChannel:      privateChannel,
 		publicLinearChannel: publicLinearChannel,
-		privateAPIAgent:    privateAPIAgent,
+		privateAPIAgent:     privateAPIAgent,
 	}
 }
 

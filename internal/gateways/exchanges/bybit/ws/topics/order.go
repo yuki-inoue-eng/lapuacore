@@ -11,6 +11,7 @@ import (
 )
 
 type OrderTopic struct {
+	topicBase
 	handlersMap        map[*domains.Symbol][]deals.OrderDataHandler
 	orderMsgTranslator *translators.OrderMsgTranslator
 }

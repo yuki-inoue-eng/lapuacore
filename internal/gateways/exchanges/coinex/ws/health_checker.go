@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 )
 
 var (
@@ -28,7 +29,7 @@ type healthChecker struct {
 	healthAlertChan chan error
 }
 
-func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.Duration) *healthChecker {
+func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.Duration) gateways.HealthChecker {
 	pongChan := make(chan []byte)
 	conn.SetPongHandler(func(msg string) error {
 		pongChan <- []byte(msg)
@@ -43,8 +44,12 @@ func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.D
 	}
 }
 
-// pongReceiveHandleFunc detects pong responses that CoinEx returns as TextMessage.
-func (c *healthChecker) pongReceiveHandleFunc(rawMsg []byte) error {
+func (c *healthChecker) GetHealthAlertChan() <-chan error {
+	return c.healthAlertChan
+}
+
+// PongReceiveHandleFunc detects pong responses that CoinEx returns as TextMessage.
+func (c *healthChecker) PongReceiveHandleFunc(rawMsg []byte) error {
 	msg := struct {
 		Data struct {
 			Result string `json:"result"`
@@ -57,10 +62,6 @@ func (c *healthChecker) pongReceiveHandleFunc(rawMsg []byte) error {
 		c.pongChan <- rawMsg
 	}
 	return nil
-}
-
-func (c *healthChecker) getHealthAlertChan() <-chan error {
-	return c.healthAlertChan
 }
 
 func (c *healthChecker) sendPing() error {
@@ -87,7 +88,7 @@ func (c *healthChecker) chanClose() {
 	})
 }
 
-func (c *healthChecker) start(ctx context.Context) {
+func (c *healthChecker) Start(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 	defer c.chanClose()

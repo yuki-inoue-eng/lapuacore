@@ -3,6 +3,7 @@ package coinex
 import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/deals"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws/topics"
 )
 
@@ -35,7 +36,7 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	}
 
 	// setup order topics
-	var orderTopics []topics.Topic
+	var orderTopics []gateways.Topic
 	for symbol, dealer := range dealers {
 		orderTopic := topics.NewOrderTopic(symbol)
 		orderTopic.SetHandler(dealer.HandleOrderData)
@@ -43,7 +44,7 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	}
 
 	// setup position topics
-	var posTopics []topics.Topic
+	var posTopics []gateways.Topic
 	for symbol, dealer := range dealers {
 		posTopic := topics.NewPositionTopic(symbol)
 		posTopic.SetHandler(dealer.HandlePositionData)
@@ -51,9 +52,9 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	}
 
 	// set topics on private channel
-	if gatewayManager.privateChannel != nil {
-		gatewayManager.privateChannel.SetTopics(orderTopics)
-		gatewayManager.privateChannel.SetTopics(posTopics)
+	if gatewayManager.privateTopicMg != nil {
+		gatewayManager.privateTopicMg.SetTopics(orderTopics)
+		gatewayManager.privateTopicMg.SetTopics(posTopics)
 	}
 
 	dls := &coinexDeals{

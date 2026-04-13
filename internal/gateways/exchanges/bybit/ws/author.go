@@ -45,7 +45,7 @@ type author struct {
 	authErrChan   chan error
 }
 
-func newAuthor(conn *websocket.Conn, credential gateways.Credential, numOfRetry int, retryInterval time.Duration) *author {
+func newAuthor(conn *websocket.Conn, credential gateways.Credential, numOfRetry int, retryInterval time.Duration) gateways.Author {
 	return &author{
 		conn:          conn,
 		credential:    credential,
@@ -67,7 +67,7 @@ func (a *author) chanClose() {
 	})
 }
 
-func (a *author) start(ctx context.Context) {
+func (a *author) Start(ctx context.Context) {
 	defer a.chanClose()
 	if err := a.sendAuthRequest(); err != nil {
 		a.authErrChan <- authErrFailedToSendAuthRequest
@@ -118,7 +118,8 @@ func (a *author) isAuthRespMsg(rawMsg []byte) (bool, error) {
 	return msg.Op == "auth", nil
 }
 
-func (a *author) handleAuthMessage(rawMsg []byte) error {
+// HandleAuthMessage checks if the message is an auth response.
+func (a *author) HandleAuthMessage(rawMsg []byte) error {
 	if isAuthMsg, err := a.isAuthRespMsg(rawMsg); err != nil {
 		return err
 	} else if !isAuthMsg {

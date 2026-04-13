@@ -14,36 +14,6 @@ const (
 	APIv5 = "/v5"
 )
 
-type ScopeType int
-
-const (
-	scopeTypeUnknown ScopeType = iota
-	scopeTypePublic
-	scopeTypePrivate
-)
-
-func (t ScopeType) String() string {
-	switch t {
-	case scopeTypePublic:
-		return "public"
-	case scopeTypePrivate:
-		return "private"
-	default:
-		return ""
-	}
-}
-
-func (t ScopeType) Path() string {
-	switch t {
-	case scopeTypePublic:
-		return ScopePathPublic
-	case scopeTypePrivate:
-		return ScopePathPrivate
-	default:
-		return ""
-	}
-}
-
 type Product int
 
 const (
