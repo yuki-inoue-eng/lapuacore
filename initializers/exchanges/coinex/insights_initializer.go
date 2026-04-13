@@ -115,11 +115,11 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 		_ = symbol // used as map key
 	}
 
-	// set topics on public channel
-	if gatewayManager.publicTopicMg != nil {
-		gatewayManager.publicTopicMg.SetTopics(tradeTopics)
-		gatewayManager.publicTopicMg.SetTopics(obTopics)
-		gatewayManager.publicTopicMg.SetTopics(btTopics)
+	// set topics on public channel group
+	if gatewayManager.publicChGroup != nil {
+		gatewayManager.publicChGroup.SetTopics(tradeTopics)
+		gatewayManager.publicChGroup.SetTopics(obTopics)
+		gatewayManager.publicChGroup.SetTopics(btTopics)
 	}
 
 	ins := &coinexInsights{

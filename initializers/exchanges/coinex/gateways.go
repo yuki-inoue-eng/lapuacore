@@ -12,6 +12,8 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/metrics"
 )
 
+const defaultDedupTTL = 10 * time.Second
+
 var gatewayManager *GatewayManager
 
 // GatewayManager orchestrates CoinEx exchange connectivity.
@@ -23,18 +25,17 @@ type GatewayManager struct {
 	insights *coinexInsights
 	deals    *coinexDeals
 
-	publicTopicMg  *topics.Manager
 	privateTopicMg *topics.Manager
 
-	publicChannel  *gateways.Channel
+	publicChGroup  *gateways.ChannelGroup
 	privateChannel *gateways.Channel
 
 	privateAPIAgent *agent.PrivateAPIAgent
 }
 
 // InitGatewayManager initializes the CoinEx gateway manager.
-// cred must not be nil (simulator mode is not yet supported).
-func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
+// publicChannelCount controls the number of redundant public WebSocket connections.
+func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
 
 	if cred == nil {
@@ -49,25 +50,22 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred)
 
-	publicTopicMg := topics.NewManager()
 	privateTopicMg := topics.NewManager()
-
-	publicChannel := ws.NewPublicChannel(latencyMeasurer)
-	publicChannel.SetTopicMg(publicTopicMg)
 
 	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
 	privateChannel.SetTopicMg(privateTopicMg)
+
+	publicChGroup := ws.NewPublicChannelGroup(latencyMeasurer, publicChannelCount, defaultDedupTTL)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
 		exporter:        exporter,
 		latencyMeasurer: latencyMeasurer,
 
-		publicTopicMg:  publicTopicMg,
 		privateTopicMg: privateTopicMg,
 
 		privateChannel:  privateChannel,
-		publicChannel:   publicChannel,
+		publicChGroup:   publicChGroup,
 		privateAPIAgent: privateAPIAgent,
 	}
 }
@@ -96,9 +94,5 @@ func StartGateway(ctx context.Context) {
 		}
 	}()
 
-	go func() {
-		if err := gatewayManager.publicChannel.Start(ctx); err != nil {
-			panic(err)
-		}
-	}()
+	go gatewayManager.publicChGroup.Start(ctx)
 }
