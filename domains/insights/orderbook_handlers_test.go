@@ -26,12 +26,12 @@ func orderBookHandlerMustDecimal(t *testing.T, s string) decimal.Decimal {
 	return d
 }
 
-func orderBookHandlerMakeRecords(t *testing.T, levels []orderBookHandlerLevel) []OBRecord {
+func orderBookHandlerMakeRecords(t *testing.T, levels []orderBookHandlerLevel) []PriceLevel {
 	t.Helper()
 
-	out := make([]OBRecord, 0, len(levels))
+	out := make([]PriceLevel, 0, len(levels))
 	for _, lv := range levels {
-		out = append(out, OBRecord{
+		out = append(out, PriceLevel{
 			SeqID:  lv.seqID,
 			Price:  orderBookHandlerMustDecimal(t, lv.price),
 			Volume: orderBookHandlerMustDecimal(t, lv.volume),
@@ -51,16 +51,16 @@ func orderBookHandlerSeedBook(t *testing.T, book *OrderBookImpl, asks []orderBoo
 	}
 }
 
-func orderBookHandlerCollectLevels(m *OBRecordMap) []string {
+func orderBookHandlerCollectLevels(m *PriceLevelMap) []string {
 	var out []string
-	m.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+	m.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		out = append(out, fmt.Sprintf("%s:%s:%d", record.Price.String(), record.Volume.String(), record.SeqID))
 		return true
 	})
 	return out
 }
 
-func orderBookHandlerFormatRecord(r *OBRecord) string {
+func orderBookHandlerFormatRecord(r *PriceLevel) string {
 	if r == nil {
 		return ""
 	}
@@ -250,11 +250,11 @@ func TestOrderBook_UpdateByOBData(t *testing.T) {
 					Type:      DataTypeDelta,
 					ExecAt:    baseExecAt,
 					ArrivedAt: baseArrivedAt,
-					Asks: []OBRecord{
+					Asks: []PriceLevel{
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "101"), Volume: orderBookHandlerMustDecimal(t, "1")},
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "102"), Volume: orderBookHandlerMustDecimal(t, "2")},
 					},
-					Bids: []OBRecord{
+					Bids: []PriceLevel{
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "100"), Volume: orderBookHandlerMustDecimal(t, "1")},
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "99"), Volume: orderBookHandlerMustDecimal(t, "2")},
 					},
@@ -279,11 +279,11 @@ func TestOrderBook_UpdateByOBData(t *testing.T) {
 					Type:      DataTypeDelta,
 					ExecAt:    baseExecAt,
 					ArrivedAt: baseArrivedAt,
-					Asks: []OBRecord{
+					Asks: []PriceLevel{
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "101"), Volume: orderBookHandlerMustDecimal(t, "1")},
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "102"), Volume: orderBookHandlerMustDecimal(t, "2")},
 					},
-					Bids: []OBRecord{
+					Bids: []PriceLevel{
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "100"), Volume: orderBookHandlerMustDecimal(t, "1")},
 						{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "99"), Volume: orderBookHandlerMustDecimal(t, "2")},
 					},
@@ -292,10 +292,10 @@ func TestOrderBook_UpdateByOBData(t *testing.T) {
 					Type:      DataTypeDelta,
 					ExecAt:    baseExecAt.Add(2 * time.Second),
 					ArrivedAt: baseArrivedAt.Add(2 * time.Second),
-					Asks: []OBRecord{
+					Asks: []PriceLevel{
 						{SeqID: 2, Price: orderBookHandlerMustDecimal(t, "101"), Volume: orderBookHandlerMustDecimal(t, "3")},
 					},
-					Bids: []OBRecord{
+					Bids: []PriceLevel{
 						{SeqID: 2, Price: orderBookHandlerMustDecimal(t, "100"), Volume: orderBookHandlerMustDecimal(t, "0")},
 						{SeqID: 2, Price: orderBookHandlerMustDecimal(t, "99"), Volume: orderBookHandlerMustDecimal(t, "5")},
 					},
@@ -397,10 +397,10 @@ func TestOrderBook_DropDeferUpdateCallBack(t *testing.T) {
 				Type:      DataTypeDelta,
 				ExecAt:    time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC),
 				ArrivedAt: time.Date(2026, 3, 22, 12, 0, 1, 0, time.UTC),
-				Asks: []OBRecord{
+				Asks: []PriceLevel{
 					{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "101"), Volume: orderBookHandlerMustDecimal(t, "1")},
 				},
-				Bids: []OBRecord{
+				Bids: []PriceLevel{
 					{SeqID: 1, Price: orderBookHandlerMustDecimal(t, "100"), Volume: orderBookHandlerMustDecimal(t, "1")},
 				},
 			})

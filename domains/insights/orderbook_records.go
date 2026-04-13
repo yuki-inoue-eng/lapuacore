@@ -8,23 +8,23 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
 
-type OBRecordMap struct {
+type PriceLevelMap struct {
 	mu         sync.RWMutex
 	ts         decimal.Decimal // tickSize
 	q          domains.Quote
-	data       map[string]OBRecord
-	bestRecord *OBRecord
+	data       map[string]PriceLevel
+	bestRecord *PriceLevel
 }
 
-func newOBRecordMap(quote domains.Quote, tickSize decimal.Decimal) *OBRecordMap {
-	return &OBRecordMap{
+func newPriceLevelMap(quote domains.Quote, tickSize decimal.Decimal) *PriceLevelMap {
+	return &PriceLevelMap{
 		ts:   tickSize,
 		q:    quote,
-		data: map[string]OBRecord{},
+		data: map[string]PriceLevel{},
 	}
 }
 
-func (p *OBRecordMap) set(record OBRecord) {
+func (p *PriceLevelMap) set(record PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -32,14 +32,14 @@ func (p *OBRecordMap) set(record OBRecord) {
 	p.updateBestRecordOnSetLocked(record)
 }
 
-func (p *OBRecordMap) Get(price decimal.Decimal) (OBRecord, bool) {
+func (p *PriceLevelMap) Get(price decimal.Decimal) (PriceLevel, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	val, ok := p.data[price.String()]
 	return val, ok
 }
 
-func (p *OBRecordMap) drop(price decimal.Decimal) {
+func (p *PriceLevelMap) drop(price decimal.Decimal) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -50,13 +50,13 @@ func (p *OBRecordMap) drop(price decimal.Decimal) {
 	}
 }
 
-func (p *OBRecordMap) Len() int {
+func (p *PriceLevelMap) Len() int {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return len(p.data)
 }
 
-func (p *OBRecordMap) replace(r *OBRecordMap) {
+func (p *PriceLevelMap) replace(r *PriceLevelMap) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -64,7 +64,7 @@ func (p *OBRecordMap) replace(r *OBRecordMap) {
 	p.recalculateBestRecordLocked()
 }
 
-func (p *OBRecordMap) Range(f func(price decimal.Decimal, record OBRecord) bool) {
+func (p *PriceLevelMap) Range(f func(price decimal.Decimal, record PriceLevel) bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	for _, record := range p.data {
@@ -74,12 +74,12 @@ func (p *OBRecordMap) Range(f func(price decimal.Decimal, record OBRecord) bool)
 	}
 }
 
-func (p *OBRecordMap) BestRecord() OBRecord {
+func (p *PriceLevelMap) BestRecord() PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	if p.bestRecord == nil {
-		return OBRecord{}
+		return PriceLevel{}
 	}
 	return *p.bestRecord.Copy()
 }
@@ -88,9 +88,9 @@ func (p *OBRecordMap) BestRecord() OBRecord {
 // the limit order resting at the specified price.
 // If the specified price is already marketable and would have been executed,
 // it returns 0.
-func (p *OBRecordMap) SumVolume(price decimal.Decimal) decimal.Decimal {
+func (p *PriceLevelMap) SumVolume(price decimal.Decimal) decimal.Decimal {
 	sumVol := decimal.Zero
-	p.SortedRange(func(itaPrice decimal.Decimal, itaRecord OBRecord) bool {
+	p.SortedRange(func(itaPrice decimal.Decimal, itaRecord PriceLevel) bool {
 		if p.q == domains.QuoteAsk && itaPrice.GreaterThan(price) {
 			return false
 		}
@@ -105,11 +105,11 @@ func (p *OBRecordMap) SumVolume(price decimal.Decimal) decimal.Decimal {
 
 // AvgExecPrice returns the average execution price for a market order
 // with the specified quantity.
-func (p *OBRecordMap) AvgExecPrice(qty decimal.Decimal) decimal.Decimal {
+func (p *PriceLevelMap) AvgExecPrice(qty decimal.Decimal) decimal.Decimal {
 	remainingQty := qty
 	weightedSum := decimal.Zero
 
-	p.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+	p.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		nextRemainingQty := remainingQty.Sub(record.Volume)
 		if nextRemainingQty.LessThanOrEqual(decimal.Zero) {
 			weightedSum = weightedSum.Add(price.Mul(remainingQty))
@@ -124,7 +124,7 @@ func (p *OBRecordMap) AvgExecPrice(qty decimal.Decimal) decimal.Decimal {
 	return weightedSum.Div(qty)
 }
 
-func (p *OBRecordMap) SortedRange(f func(price decimal.Decimal, record OBRecord) bool) {
+func (p *PriceLevelMap) SortedRange(f func(price decimal.Decimal, record PriceLevel) bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -136,7 +136,7 @@ func (p *OBRecordMap) SortedRange(f func(price decimal.Decimal, record OBRecord)
 	}
 }
 
-func (p *OBRecordMap) sortedKeys() []decimal.Decimal {
+func (p *PriceLevelMap) sortedKeys() []decimal.Decimal {
 	var keys []decimal.Decimal
 	for k := range p.data {
 		price, err := decimal.NewFromString(k)
@@ -156,7 +156,7 @@ func (p *OBRecordMap) sortedKeys() []decimal.Decimal {
 	return keys
 }
 
-func (p *OBRecordMap) updateBestRecordOnSetLocked(record OBRecord) {
+func (p *PriceLevelMap) updateBestRecordOnSetLocked(record PriceLevel) {
 	if record.Volume.IsZero() {
 		if p.bestRecord != nil && p.bestRecord.Price.Equal(record.Price) {
 			p.recalculateBestRecordLocked()
@@ -179,7 +179,7 @@ func (p *OBRecordMap) updateBestRecordOnSetLocked(record OBRecord) {
 	}
 }
 
-func (p *OBRecordMap) recalculateBestRecordLocked() {
+func (p *PriceLevelMap) recalculateBestRecordLocked() {
 	p.bestRecord = nil
 
 	for _, record := range p.data {
@@ -193,25 +193,25 @@ func (p *OBRecordMap) recalculateBestRecordLocked() {
 	}
 }
 
-func (p *OBRecordMap) isBetterPrice(left, right decimal.Decimal) bool {
+func (p *PriceLevelMap) isBetterPrice(left, right decimal.Decimal) bool {
 	if p.q == domains.QuoteBid {
 		return left.GreaterThan(right)
 	}
 	return left.LessThan(right)
 }
 
-type OBRecord struct {
+type PriceLevel struct {
 	SeqID  int64
 	Price  decimal.Decimal
 	Volume decimal.Decimal
 }
 
-func (r *OBRecord) isOld(nowID int64) bool {
+func (r *PriceLevel) isOld(nowID int64) bool {
 	return r.SeqID < nowID
 }
 
-func (r *OBRecord) Copy() *OBRecord {
-	return &OBRecord{
+func (r *PriceLevel) Copy() *PriceLevel {
+	return &PriceLevel{
 		SeqID:  r.SeqID,
 		Price:  r.Price,
 		Volume: r.Volume,

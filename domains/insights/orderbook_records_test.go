@@ -23,12 +23,12 @@ func mustDecimal(t *testing.T, s string) decimal.Decimal {
 	return d
 }
 
-func newTestOBRecordMap(t *testing.T, quote domains.Quote, levels []testLevel) *OBRecordMap {
+func newTestPriceLevelMap(t *testing.T, quote domains.Quote, levels []testLevel) *PriceLevelMap {
 	t.Helper()
 
-	m := newOBRecordMap(quote, mustDecimal(t, "0.1"))
+	m := newPriceLevelMap(quote, mustDecimal(t, "0.1"))
 	for i, lv := range levels {
-		m.set(OBRecord{
+		m.set(PriceLevel{
 			SeqID:  int64(i + 1),
 			Price:  mustDecimal(t, lv.price),
 			Volume: mustDecimal(t, lv.volume),
@@ -45,7 +45,7 @@ func decimalStrings(values []decimal.Decimal) []string {
 	return out
 }
 
-func TestOBRecordMap_sortedKeys(t *testing.T) {
+func TestPriceLevelMap_sortedKeys(t *testing.T) {
 	tests := []struct {
 		name   string
 		quote  domains.Quote
@@ -76,7 +76,7 @@ func TestOBRecordMap_sortedKeys(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestOBRecordMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
 
 			got := decimalStrings(m.sortedKeys())
 
@@ -85,7 +85,7 @@ func TestOBRecordMap_sortedKeys(t *testing.T) {
 	}
 }
 
-func TestOBRecordMap_SortedRange(t *testing.T) {
+func TestPriceLevelMap_SortedRange(t *testing.T) {
 	tests := []struct {
 		name       string
 		quote      domains.Quote
@@ -130,11 +130,11 @@ func TestOBRecordMap_SortedRange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestOBRecordMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
 
 			var got []string
 			count := 0
-			m.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+			m.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 				got = append(got, price.String())
 				count++
 				return count < tt.breakAfter
@@ -145,7 +145,7 @@ func TestOBRecordMap_SortedRange(t *testing.T) {
 	}
 }
 
-func TestOBRecordMap_SumVolume(t *testing.T) {
+func TestPriceLevelMap_SumVolume(t *testing.T) {
 	tests := []struct {
 		name   string
 		quote  domains.Quote
@@ -201,7 +201,7 @@ func TestOBRecordMap_SumVolume(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestOBRecordMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
 
 			got := m.SumVolume(mustDecimal(t, tt.price))
 
@@ -210,7 +210,7 @@ func TestOBRecordMap_SumVolume(t *testing.T) {
 	}
 }
 
-func TestOBRecordMap_AvgExecPrice(t *testing.T) {
+func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 	tests := []struct {
 		name   string
 		quote  domains.Quote
@@ -254,7 +254,7 @@ func TestOBRecordMap_AvgExecPrice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestOBRecordMap(t, tt.quote, tt.levels)
+			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
 
 			got := m.AvgExecPrice(mustDecimal(t, tt.qty))
 
@@ -263,7 +263,7 @@ func TestOBRecordMap_AvgExecPrice(t *testing.T) {
 	}
 }
 
-func TestOBRecordMap_BestRecord(t *testing.T) {
+func TestPriceLevelMap_BestRecord(t *testing.T) {
 	tests := []struct {
 		name  string
 		quote domains.Quote
@@ -305,7 +305,7 @@ func TestOBRecordMap_BestRecord(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := newTestOBRecordMap(t, tt.quote, tt.setup)
+			m := newTestPriceLevelMap(t, tt.quote, tt.setup)
 
 			if tt.drop != "" {
 				m.drop(mustDecimal(t, tt.drop))
