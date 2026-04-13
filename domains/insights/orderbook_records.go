@@ -1,26 +1,34 @@
 package insights
 
 import (
-	"sort"
 	"sync"
 
+	"github.com/google/btree"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
 
+// PriceLevelMap stores price levels in a B-Tree ordered by price.
+// Ask maps iterate in ascending price order (lowest = best).
+// Bid maps iterate in descending price order (highest = best).
 type PriceLevelMap struct {
-	mu         sync.RWMutex
-	ts         decimal.Decimal // tickSize
-	q          domains.Quote
-	data       map[string]PriceLevel
-	bestLevel *PriceLevel
+	mu   sync.RWMutex
+	ts   decimal.Decimal // tickSize
+	q    domains.Quote
+	tree *btree.BTreeG[PriceLevel]
 }
 
 func newPriceLevelMap(quote domains.Quote, tickSize decimal.Decimal) *PriceLevelMap {
+	less := func(a, b PriceLevel) bool {
+		if quote == domains.QuoteBid {
+			return a.Price.GreaterThan(b.Price)
+		}
+		return a.Price.LessThan(b.Price)
+	}
 	return &PriceLevelMap{
 		ts:   tickSize,
 		q:    quote,
-		data: map[string]PriceLevel{},
+		tree: btree.NewG(16, less),
 	}
 }
 
@@ -28,66 +36,63 @@ func (p *PriceLevelMap) set(record PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.data[record.Price.String()] = record
-	p.updateBestLevelOnSetLocked(record)
+	if record.Volume.IsZero() {
+		p.tree.Delete(PriceLevel{Price: record.Price})
+		return
+	}
+	p.tree.ReplaceOrInsert(record)
 }
 
 func (p *PriceLevelMap) Get(price decimal.Decimal) (PriceLevel, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	val, ok := p.data[price.String()]
-	return val, ok
+	return p.tree.Get(PriceLevel{Price: price})
 }
 
 func (p *PriceLevelMap) drop(price decimal.Decimal) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
-	delete(p.data, price.String())
-
-	if p.bestLevel != nil && p.bestLevel.Price.Equal(price) {
-		p.recalculateBestLevelLocked()
-	}
+	p.tree.Delete(PriceLevel{Price: price})
 }
 
 func (p *PriceLevelMap) Len() int {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return len(p.data)
+	return p.tree.Len()
 }
 
 func (p *PriceLevelMap) replace(r *PriceLevelMap) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
-	p.data = r.data
-	p.recalculateBestLevelLocked()
+	p.tree = r.tree
 }
 
 func (p *PriceLevelMap) Range(f func(price decimal.Decimal, record PriceLevel) bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	for _, record := range p.data {
-		if !f(record.Price, record) {
-			break
-		}
-	}
+	p.tree.Ascend(func(item PriceLevel) bool {
+		return f(item.Price, item)
+	})
 }
 
+// BestLevel returns the best price level (lowest ask or highest bid).
+// O(1) — B-Tree minimum access.
 func (p *PriceLevelMap) BestLevel() PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if p.bestLevel == nil {
+	best, ok := p.tree.Min()
+	if !ok {
 		return PriceLevel{}
 	}
-	return *p.bestLevel.Copy()
+	return *best.Copy()
 }
 
 // SumVolume returns the total market order quantity required to fully execute
 // the limit order resting at the specified price.
 // If the specified price is already marketable and would have been executed,
 // it returns 0.
+// O(k) where k is the number of levels up to the target price.
 func (p *PriceLevelMap) SumVolume(price decimal.Decimal) decimal.Decimal {
 	sumVol := decimal.Zero
 	p.SortedRange(func(itaPrice decimal.Decimal, itaRecord PriceLevel) bool {
@@ -105,6 +110,7 @@ func (p *PriceLevelMap) SumVolume(price decimal.Decimal) decimal.Decimal {
 
 // AvgExecPrice returns the average execution price for a market order
 // with the specified quantity.
+// O(k) where k is the number of levels consumed to fill the quantity.
 func (p *PriceLevelMap) AvgExecPrice(qty decimal.Decimal) decimal.Decimal {
 	remainingQty := qty
 	weightedSum := decimal.Zero
@@ -124,80 +130,14 @@ func (p *PriceLevelMap) AvgExecPrice(qty decimal.Decimal) decimal.Decimal {
 	return weightedSum.Div(qty)
 }
 
+// SortedRange iterates over price levels in best-to-worst order.
+// O(n) — in-order B-Tree traversal without sorting.
 func (p *PriceLevelMap) SortedRange(f func(price decimal.Decimal, record PriceLevel) bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-
-	for _, key := range p.sortedKeys() {
-		record := p.data[key.String()]
-		if !f(key, record) {
-			break
-		}
-	}
-}
-
-func (p *PriceLevelMap) sortedKeys() []decimal.Decimal {
-	var keys []decimal.Decimal
-	for k := range p.data {
-		price, err := decimal.NewFromString(k)
-		if err != nil {
-			continue
-		}
-		keys = append(keys, price)
-	}
-
-	sortFunc := func(i, j int) bool {
-		if p.q == domains.QuoteBid {
-			return keys[i].GreaterThan(keys[j])
-		}
-		return keys[i].LessThan(keys[j])
-	}
-	sort.Slice(keys, sortFunc)
-	return keys
-}
-
-func (p *PriceLevelMap) updateBestLevelOnSetLocked(record PriceLevel) {
-	if record.Volume.IsZero() {
-		if p.bestLevel != nil && p.bestLevel.Price.Equal(record.Price) {
-			p.recalculateBestLevelLocked()
-		}
-		return
-	}
-
-	if p.bestLevel == nil {
-		p.bestLevel = record.Copy()
-		return
-	}
-
-	if p.bestLevel.Price.Equal(record.Price) {
-		p.bestLevel = record.Copy()
-		return
-	}
-
-	if p.isBetterPrice(record.Price, p.bestLevel.Price) {
-		p.bestLevel = record.Copy()
-	}
-}
-
-func (p *PriceLevelMap) recalculateBestLevelLocked() {
-	p.bestLevel = nil
-
-	for _, record := range p.data {
-		if record.Volume.IsZero() {
-			continue
-		}
-
-		if p.bestLevel == nil || p.isBetterPrice(record.Price, p.bestLevel.Price) {
-			p.bestLevel = record.Copy()
-		}
-	}
-}
-
-func (p *PriceLevelMap) isBetterPrice(left, right decimal.Decimal) bool {
-	if p.q == domains.QuoteBid {
-		return left.GreaterThan(right)
-	}
-	return left.LessThan(right)
+	p.tree.Ascend(func(item PriceLevel) bool {
+		return f(item.Price, item)
+	})
 }
 
 type PriceLevel struct {
