@@ -133,10 +133,10 @@ func InitInsights(
 		linearOBTopics = append(linearOBTopics, obTopic)
 	}
 
-	// set topics on public channel
-	if gatewayManager.publicTopicMg != nil {
-		gatewayManager.publicTopicMg.SetTopics(linearTradeTopics)
-		gatewayManager.publicTopicMg.SetTopics(linearOBTopics)
+	// set topics on public channel group
+	if gatewayManager.publicLinearChGroup != nil {
+		gatewayManager.publicLinearChGroup.SetTopics(linearTradeTopics)
+		gatewayManager.publicLinearChGroup.SetTopics(linearOBTopics)
 	}
 
 	ins := &bybitInsights{

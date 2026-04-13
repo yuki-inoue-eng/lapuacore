@@ -13,6 +13,8 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/metrics"
 )
 
+const defaultDedupTTL = 10 * time.Second
+
 var gatewayManager *GatewayManager
 
 // GatewayManager orchestrates Bybit exchange connectivity.
@@ -30,17 +32,17 @@ type GatewayManager struct {
 	orderBookTopicMap map[*OrderBookDesignator]*topics.OrderBookTopic
 	tradeTopicMap     map[*domains.Symbol]*topics.TradeTopic
 
-	publicTopicMg  *topics.Manager
 	privateTopicMg *topics.Manager
 
-	privateChannel      *gateways.Channel
-	publicLinearChannel *gateways.Channel
+	privateChannel        *gateways.Channel
+	publicLinearChGroup   *gateways.ChannelGroup
 
 	privateAPIAgent *agent.PrivateAPIAgent
 }
 
 // InitGatewayManager initializes the Bybit gateway manager.
-func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
+// publicChannelCount controls the number of redundant public WebSocket connections.
+func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
 
 	if cred == nil {
@@ -55,14 +57,12 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred, latencyMeasurer)
 
-	publicTopicMg := topics.NewManager()
 	privateTopicMg := topics.NewManager()
 
 	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
 	privateChannel.SetTopicMg(privateTopicMg)
 
-	publicLinearChannel := ws.NewPublicChannel(ws.ProductLinear, latencyMeasurer)
-	publicLinearChannel.SetTopicMg(publicTopicMg)
+	publicLinearChGroup := ws.NewPublicChannelGroup(ws.ProductLinear, latencyMeasurer, publicChannelCount, defaultDedupTTL)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
@@ -74,12 +74,11 @@ func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter) {
 		orderBookTopicMap: map[*OrderBookDesignator]*topics.OrderBookTopic{},
 		tradeTopicMap:     map[*domains.Symbol]*topics.TradeTopic{},
 
-		publicTopicMg:  publicTopicMg,
 		privateTopicMg: privateTopicMg,
 
-		privateChannel:      privateChannel,
-		publicLinearChannel: publicLinearChannel,
-		privateAPIAgent:     privateAPIAgent,
+		privateChannel:        privateChannel,
+		publicLinearChGroup:   publicLinearChGroup,
+		privateAPIAgent:       privateAPIAgent,
 	}
 }
 
@@ -121,11 +120,7 @@ func StartGateway(ctx context.Context) {
 		}()
 	}
 
-	if gatewayManager.publicLinearChannel != nil {
-		go func() {
-			if err := gatewayManager.publicLinearChannel.Start(ctx); err != nil {
-				panic(err)
-			}
-		}()
+	if gatewayManager.publicLinearChGroup != nil {
+		go gatewayManager.publicLinearChGroup.Start(ctx)
 	}
 }
