@@ -37,15 +37,7 @@ func newTestPriceLevelMap(t *testing.T, quote domains.Quote, levels []testLevel)
 	return m
 }
 
-func decimalStrings(values []decimal.Decimal) []string {
-	out := make([]string, 0, len(values))
-	for _, v := range values {
-		out = append(out, v.String())
-	}
-	return out
-}
-
-func TestPriceLevelMap_sortedKeys(t *testing.T) {
+func TestPriceLevelMap_ordering(t *testing.T) {
 	tests := []struct {
 		name   string
 		quote  domains.Quote
@@ -78,7 +70,11 @@ func TestPriceLevelMap_sortedKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newTestPriceLevelMap(t, tt.quote, tt.levels)
 
-			got := decimalStrings(m.sortedKeys())
+			var got []string
+			m.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
+				got = append(got, price.String())
+				return true
+			})
 
 			assert.Equal(t, tt.want, got)
 		})
