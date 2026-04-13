@@ -6,25 +6,26 @@ import (
 	"time"
 )
 
-// rateLimiter enforces Bybit short cycle rate limits.
+// rateLimiter enforces Bybit API rate limits (rolling window per second per UID).
 // see: https://bybit-exchange.github.io/docs/v5/rate-limit
 
 // RateLimitGroup represents a group of endpoints that share a rate limit quota.
 type RateLimitGroup int
 
 const (
-	// GroupCreateOrder covers order creation endpoints (9r/1s).
+	// GroupCreateOrder covers order creation endpoints (20r/1s for Linear).
 	GroupCreateOrder RateLimitGroup = iota
-	// GroupCancelOrder covers order cancellation endpoints (9r/1s).
+	// GroupCancelOrder covers order cancellation endpoints (20r/1s for Linear).
 	GroupCancelOrder
-	// GroupAmendOrder covers order amendment endpoints (9r/1s).
+	// GroupAmendOrder covers order amendment endpoints (10r/1s for Linear).
 	GroupAmendOrder
 )
 
+// Linear rate limits per the Bybit V5 API documentation.
 const (
-	limitCreateOrder = 9
-	limitCancelOrder = 9
-	limitAmendOrder  = 9
+	limitCreateOrder = 20
+	limitCancelOrder = 20
+	limitAmendOrder  = 10
 )
 
 type rateLimiter struct {
