@@ -1,110 +1,34 @@
 package ws
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 )
 
-var (
-	healthErrFailedToSendPing  = errors.New("failed to send ping msg")
-	healthErrConnectionTimeout = errors.New("connection is timeout")
-)
-
-type healthChecker struct {
-	conn            *websocket.Conn
-	pingInterval    time.Duration
-	timeoutDuration time.Duration
-	lastSendPingAt  int64
-	lastReceivedAt  int64
-
-	chanCloseOnce   sync.Once
-	pongChan        chan []byte
-	healthAlertChan chan error
-}
-
 func newHealthChecker(conn *websocket.Conn, pingInterval, timeoutDuration time.Duration) gateways.HealthChecker {
-	pongChan := make(chan []byte)
-	conn.SetPongHandler(func(msg string) error {
-		pongChan <- []byte(msg)
-		return nil
-	})
-	return &healthChecker{
-		conn:            conn,
-		pongChan:        pongChan,
-		healthAlertChan: make(chan error),
-		pingInterval:    pingInterval,
-		timeoutDuration: timeoutDuration,
-	}
+	return gateways.NewHealthChecker(conn, pingInterval, timeoutDuration, coinexPingSender, coinexPongMatcher)
 }
 
-func (c *healthChecker) GetHealthAlertChan() <-chan error {
-	return c.healthAlertChan
+// coinexPingSender sends a CoinEx server.ping TextMessage.
+func coinexPingSender(conn *websocket.Conn) error {
+	now := time.Now().Unix()
+	pingMsg := fmt.Sprintf(`{"method":"server.ping","params":{},"id":%d}`, now)
+	return conn.WriteMessage(websocket.TextMessage, []byte(pingMsg))
 }
 
-// PongReceiveHandleFunc detects pong responses that CoinEx returns as TextMessage.
-func (c *healthChecker) PongReceiveHandleFunc(rawMsg []byte) error {
+// coinexPongMatcher detects CoinEx pong responses returned as TextMessage.
+func coinexPongMatcher(rawMsg []byte) bool {
 	msg := struct {
 		Data struct {
 			Result string `json:"result"`
 		} `json:"data"`
 	}{}
 	if err := json.Unmarshal(rawMsg, &msg); err != nil {
-		return nil
-	}
-	if msg.Data.Result == "pong" {
-		c.pongChan <- rawMsg
-	}
-	return nil
-}
-
-func (c *healthChecker) sendPing() error {
-	now := time.Now().Unix()
-	c.lastSendPingAt = now
-	pingMsg := fmt.Sprintf(`{"method":"server.ping","params":{},"id":%d}`, now)
-	return c.conn.WriteMessage(websocket.TextMessage, []byte(pingMsg))
-}
-
-func (c *healthChecker) isTimeout() bool {
-	if c.lastSendPingAt == 0 {
 		return false
 	}
-	if c.lastReceivedAt == 0 {
-		return time.Since(time.Unix(c.lastSendPingAt, 0)) > c.timeoutDuration
-	}
-	return time.Since(time.Unix(c.lastReceivedAt, 0)) > c.timeoutDuration
-}
-
-func (c *healthChecker) chanClose() {
-	c.chanCloseOnce.Do(func() {
-		close(c.healthAlertChan)
-		close(c.pongChan)
-	})
-}
-
-func (c *healthChecker) Start(ctx context.Context) {
-	pingTicker := time.NewTicker(c.pingInterval)
-	defer pingTicker.Stop()
-	defer c.chanClose()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-pingTicker.C:
-			if err := c.sendPing(); err != nil {
-				c.healthAlertChan <- healthErrFailedToSendPing
-			}
-			if c.isTimeout() {
-				c.healthAlertChan <- healthErrConnectionTimeout
-			}
-		case <-c.pongChan:
-			c.lastReceivedAt = time.Now().Unix()
-		}
-	}
+	return msg.Data.Result == "pong"
 }
