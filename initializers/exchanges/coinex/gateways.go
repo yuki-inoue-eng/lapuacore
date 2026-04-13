@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/yuki-inoue-eng/lapuacore/initializers/lapua"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/agent"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/coinex/ws/topics"
-	"github.com/yuki-inoue-eng/lapuacore/metrics"
 )
 
 const defaultDedupTTL = 10 * time.Second
@@ -19,7 +19,6 @@ var gatewayManager *GatewayManager
 // GatewayManager orchestrates CoinEx exchange connectivity.
 type GatewayManager struct {
 	cred            gateways.Credential
-	exporter        *metrics.Exporter
 	latencyMeasurer *gateways.LatencyMeasurer
 
 	insights *coinexInsights
@@ -35,31 +34,36 @@ type GatewayManager struct {
 
 // InitGatewayManager initializes the CoinEx gateway manager.
 // publicChannelCount controls the number of redundant public WebSocket connections.
-func InitGatewayManager(cred gateways.Credential, exporter *metrics.Exporter, publicChannelCount int) {
+// Must be called after lapua.InitAndStart (requires lapua.Exporter).
+func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
-
 	if cred == nil {
 		panic(fmt.Errorf("credential must not be nil (simulator mode is not yet supported)"))
 	}
-	if exporter == nil {
-		panic(fmt.Errorf("exporter must not be nil"))
+	if lapua.Exporter == nil {
+		panic(fmt.Errorf("lapua.Exporter must be initialized before calling InitGatewayManager"))
 	}
+	exporter := lapua.Exporter
 
+	// initialize and set up ws latency measurer
 	latencyMeasurer := gateways.NewLatencyMeasurer(aggInterval)
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
+	// initialize private channel
 	privateAPIAgent := agent.NewPrivateAPIAgent(cred)
-
 	privateTopicMg := topics.NewManager()
-
 	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
 	privateChannel.SetTopicMg(privateTopicMg)
 
-	publicChGroup := ws.NewPublicChannelGroup(latencyMeasurer, publicChannelCount, defaultDedupTTL)
+	// initialize public channel group
+	publicChGroup := ws.NewPublicChannelGroup(
+		latencyMeasurer,
+		publicChannelCount,
+		defaultDedupTTL,
+	)
 
 	gatewayManager = &GatewayManager{
 		cred:            cred,
-		exporter:        exporter,
 		latencyMeasurer: latencyMeasurer,
 
 		privateTopicMg: privateTopicMg,
