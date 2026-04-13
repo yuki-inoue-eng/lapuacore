@@ -40,8 +40,8 @@ func (p *OrderBookImpl) UpdateByOBData(data *OrderBookData) {
 	}
 
 	// Record the current best price
-	bestAsk_ := p.AsksMap.BestRecord()
-	bestBid_ := p.BidsMap.BestRecord()
+	bestAsk_ := p.AsksMap.BestLevel()
+	bestBid_ := p.BidsMap.BestLevel()
 	p.setCurrentBestAsk(bestAsk_.Copy())
 	p.setCurrentBestBid(bestBid_.Copy())
 
