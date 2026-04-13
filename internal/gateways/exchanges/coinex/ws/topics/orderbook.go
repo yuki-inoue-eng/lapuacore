@@ -46,6 +46,21 @@ func (t *OrderBookTopic) SubscribeMsg() []byte {
 	return []byte(fmt.Sprintf(`{"method":"depth.subscribe","params":{"market_list":[["%s",50,"0",true]]},"id":%d}`, t.symbol.Name(), id))
 }
 
+// MessageID returns depth.updated_at as a unique identifier.
+func (t *OrderBookTopic) MessageID(rawMsg []byte) string {
+	msg := struct {
+		Data struct {
+			Depth struct {
+				UpdatedAt int64 `json:"updated_at"`
+			} `json:"depth"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil || msg.Data.Depth.UpdatedAt == 0 {
+		return ""
+	}
+	return fmt.Sprintf("ob:%d", msg.Data.Depth.UpdatedAt)
+}
+
 func (t *OrderBookTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {
 	dto := &dtos.OrderBookMsgDto{}
 	if err := json.Unmarshal(rawMsg, dto); err != nil {

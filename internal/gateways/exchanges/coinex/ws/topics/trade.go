@@ -46,6 +46,21 @@ func (t *TradeTopic) SubscribeMsg() []byte {
 	return []byte(fmt.Sprintf(`{"method":"deals.subscribe","params":{"market_list":["%s"]},"id":%d}`, t.symbol.Name(), id))
 }
 
+// MessageID returns the first deal_id as a unique identifier.
+func (t *TradeTopic) MessageID(rawMsg []byte) string {
+	msg := struct {
+		Data struct {
+			DealList []struct {
+				DealID int64 `json:"deal_id"`
+			} `json:"deal_list"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil || len(msg.Data.DealList) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("trade:%d", msg.Data.DealList[0].DealID)
+}
+
 func (t *TradeTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {
 	dto := &dtos.TradeMsgDto{}
 	if err := json.Unmarshal(rawMsg, dto); err != nil {

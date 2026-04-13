@@ -8,6 +8,10 @@ type Topic interface {
 	SubscribeMsgID() string
 	SubscribeMsg() []byte
 	MsgHandler(timestamp *time.Time, rawMsg []byte) error
+	// MessageID extracts a unique identifier from a raw message for
+	// duplicate detection across redundant connections.
+	// Returns "" if the message has no identifiable ID.
+	MessageID(rawMsg []byte) string
 }
 
 // TopicManager orchestrates topic subscriptions and message routing.

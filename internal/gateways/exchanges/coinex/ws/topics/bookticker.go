@@ -46,6 +46,19 @@ func (t *BookTickerTopic) SubscribeMsg() []byte {
 	return []byte(fmt.Sprintf(`{"method":"bbo.subscribe","params":{"market_list":["%s"]},"id":%d}`, t.symbol.Name(), id))
 }
 
+// MessageID returns updated_at as a unique identifier.
+func (t *BookTickerTopic) MessageID(rawMsg []byte) string {
+	msg := struct {
+		Data struct {
+			UpdatedAt int64 `json:"updated_at"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(rawMsg, &msg); err != nil || msg.Data.UpdatedAt == 0 {
+		return ""
+	}
+	return fmt.Sprintf("bbo:%d", msg.Data.UpdatedAt)
+}
+
 func (t *BookTickerTopic) MsgHandler(ts *time.Time, rawMsg []byte) error {
 	dto := &dtos.BookTickerMsgDto{}
 	if err := json.Unmarshal(rawMsg, dto); err != nil {
