@@ -45,7 +45,7 @@ func InitDeals(symbols []*domains.Symbol, onError func(err error)) {
 	// setup position topics
 	var posTopics []topics.Topic
 	for symbol, dealer := range dealers {
-		posTopic := topics.NewPositionTopic(symbol.Name())
+		posTopic := topics.NewPositionTopic(symbol)
 		posTopic.SetHandler(dealer.HandlePositionData)
 		posTopics = append(posTopics, posTopic)
 	}

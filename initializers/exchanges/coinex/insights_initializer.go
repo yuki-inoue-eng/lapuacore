@@ -79,7 +79,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	// setup trade topics
 	var tradeTopics []topics.Topic
 	for symbol, trade := range trades {
-		tradeTopic := topics.NewTradeTopic(symbol.Name())
+		tradeTopic := topics.NewTradeTopic(symbol)
 		tradeTopic.SetHandler(trade.Update)
 		tradeTopics = append(tradeTopics, tradeTopic)
 	}
@@ -93,7 +93,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	// setup orderBook topics
 	var obTopics []topics.Topic
 	for symbol, ob := range orderBooks {
-		obTopic := topics.NewOrderBookTopic(symbol.Name())
+		obTopic := topics.NewOrderBookTopic(symbol)
 		obTopic.SetHandler(ob.UpdateByOBData)
 		obTopics = append(obTopics, obTopic)
 		_ = symbol // used as map key
@@ -108,7 +108,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	// setup bookTicker topics
 	var btTopics []topics.Topic
 	for symbol, bt := range bookTickers {
-		btTopic := topics.NewBookTickerTopic(symbol.Name())
+		btTopic := topics.NewBookTickerTopic(symbol)
 		btTopic.SetHandler(bt.Update)
 		btTopics = append(btTopics, btTopic)
 		_ = symbol // used as map key
