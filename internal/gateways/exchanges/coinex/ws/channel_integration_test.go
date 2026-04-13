@@ -101,7 +101,7 @@ func TestChannelGroupAllTopics(t *testing.T) {
 	})
 
 	btTopic := topics.NewBookTickerTopic(domains.SymbolCoinExFuturesBTCUSDT)
-	btTopic.SetHandler(func(data *insights.BookTickerData) {
+	btTopic.SetHandler(func(data *insights.QuoteData) {
 		btCount++
 		bestAsk := "N/A"
 		bestBid := "N/A"

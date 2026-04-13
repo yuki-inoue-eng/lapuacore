@@ -35,11 +35,9 @@ type GatewayManager struct {
 // InitGatewayManager initializes the CoinEx gateway manager.
 // publicChannelCount controls the number of redundant public WebSocket connections.
 // Must be called after lapua.InitAndStart (requires lapua.Exporter).
+// If cred is nil, only public channels are initialized (no private channel or API agent).
 func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	const aggInterval = 5 * time.Second
-	if cred == nil {
-		panic(fmt.Errorf("credential must not be nil (simulator mode is not yet supported)"))
-	}
 	if lapua.Exporter == nil {
 		panic(fmt.Errorf("lapua.Exporter must be initialized before calling InitGatewayManager"))
 	}
@@ -49,29 +47,27 @@ func InitGatewayManager(cred gateways.Credential, publicChannelCount int) {
 	latencyMeasurer := gateways.NewLatencyMeasurer(aggInterval)
 	exporter.SetLatencyMeasurer(latencyMeasurer)
 
-	// initialize private channel
-	privateAPIAgent := agent.NewPrivateAPIAgent(cred)
-	privateTopicMg := topics.NewManager()
-	privateChannel := ws.NewPrivateChannel(cred, latencyMeasurer)
-	privateChannel.SetTopicMg(privateTopicMg)
+	gm := &GatewayManager{
+		cred:            cred,
+		latencyMeasurer: latencyMeasurer,
+	}
+
+	// initialize private channel (only when credentials are provided)
+	if cred != nil {
+		gm.privateAPIAgent = agent.NewPrivateAPIAgent(cred)
+		gm.privateTopicMg = topics.NewManager()
+		gm.privateChannel = ws.NewPrivateChannel(cred, latencyMeasurer)
+		gm.privateChannel.SetTopicMg(gm.privateTopicMg)
+	}
 
 	// initialize public channel group
-	publicChGroup := ws.NewPublicChannelGroup(
+	gm.publicChGroup = ws.NewPublicChannelGroup(
 		latencyMeasurer,
 		publicChannelCount,
 		defaultDedupTTL,
 	)
 
-	gatewayManager = &GatewayManager{
-		cred:            cred,
-		latencyMeasurer: latencyMeasurer,
-
-		privateTopicMg: privateTopicMg,
-
-		privateChannel:  privateChannel,
-		publicChGroup:   publicChGroup,
-		privateAPIAgent: privateAPIAgent,
-	}
+	gatewayManager = gm
 }
 
 func (m *GatewayManager) setDeals(deals *coinexDeals) {
@@ -90,13 +86,19 @@ func StartGateway(ctx context.Context) {
 
 	go gatewayManager.latencyMeasurer.Start(ctx)
 
-	gatewayManager.privateAPIAgent.Start(ctx)
+	if gatewayManager.privateAPIAgent != nil {
+		gatewayManager.privateAPIAgent.Start(ctx)
+	}
 
-	go func() {
-		if err := gatewayManager.privateChannel.Start(ctx); err != nil {
-			panic(err)
-		}
-	}()
+	if gatewayManager.privateChannel != nil {
+		go func() {
+			if err := gatewayManager.privateChannel.Start(ctx); err != nil {
+				panic(err)
+			}
+		}()
+	}
 
-	go gatewayManager.publicChGroup.Start(ctx)
+	if gatewayManager.publicChGroup != nil {
+		go gatewayManager.publicChGroup.Start(ctx)
+	}
 }
