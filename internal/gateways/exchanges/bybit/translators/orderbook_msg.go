@@ -36,8 +36,8 @@ func (t *OrderBookMsgTranslator) Translate(arrivedAt time.Time, msg *dtos.OrderB
 	return model, nil
 }
 
-func (t *OrderBookMsgTranslator) translateRecords(seqID int64, records [][]string) ([]insights.OBRecord, error) {
-	var result []insights.OBRecord
+func (t *OrderBookMsgTranslator) translateRecords(seqID int64, records [][]string) ([]insights.PriceLevel, error) {
+	var result []insights.PriceLevel
 	for _, r := range records {
 		p, err := decimal.NewFromString(r[0])
 		if err != nil {
@@ -48,7 +48,7 @@ func (t *OrderBookMsgTranslator) translateRecords(seqID int64, records [][]strin
 			return nil, err
 		}
 
-		result = append(result, insights.OBRecord{
+		result = append(result, insights.PriceLevel{
 			SeqID:  seqID,
 			Price:  p,
 			Volume: v,

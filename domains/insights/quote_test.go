@@ -15,12 +15,12 @@ func makeQuoteData(seqID int64, execAt time.Time, askPrice, askVol, bidPrice, bi
 		ExecAt:    execAt,
 		EventAt:   execAt,
 		ArrivedAt: execAt,
-		BestAsk: &OBRecord{
+		BestAsk: &PriceLevel{
 			SeqID:  seqID,
 			Price:  decimal.RequireFromString(askPrice),
 			Volume: decimal.RequireFromString(askVol),
 		},
-		BestBid: &OBRecord{
+		BestBid: &PriceLevel{
 			SeqID:  seqID,
 			Price:  decimal.RequireFromString(bidPrice),
 			Volume: decimal.RequireFromString(bidVol),

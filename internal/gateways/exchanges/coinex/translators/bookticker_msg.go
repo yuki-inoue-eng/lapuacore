@@ -41,7 +41,7 @@ func (t *BookTickerMsgTranslator) Translate(
 func (t *BookTickerMsgTranslator) translateRecord(
 	seqID int64,
 	price, size string,
-) (*insights.OBRecord, error) {
+) (*insights.PriceLevel, error) {
 	p, err := decimal.NewFromString(price)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (t *BookTickerMsgTranslator) translateRecord(
 	if err != nil {
 		return nil, err
 	}
-	return &insights.OBRecord{
+	return &insights.PriceLevel{
 		SeqID:  seqID,
 		Price:  p,
 		Volume: s,

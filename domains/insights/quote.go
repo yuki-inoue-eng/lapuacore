@@ -15,8 +15,8 @@ type QuoteData struct {
 	ExecAt    time.Time // Time when the price change occurred on the exchange
 	EventAt   time.Time
 	ArrivedAt time.Time // Time when the data arrived locally
-	BestAsk   *OBRecord
-	BestBid   *OBRecord
+	BestAsk   *PriceLevel
+	BestBid   *PriceLevel
 }
 
 type QuoteImpl struct {
@@ -27,11 +27,11 @@ type QuoteImpl struct {
 	lastExecAt            *time.Time
 	lastEventAt           *time.Time
 	lastArrivedAt         *time.Time
-	bestAsk               *OBRecord
-	bestBid               *OBRecord
+	bestAsk               *PriceLevel
+	bestBid               *PriceLevel
 
-	beforeBestAsk *OBRecord
-	beforeBestBid *OBRecord
+	beforeBestAsk *PriceLevel
+	beforeBestBid *PriceLevel
 
 	updateCallback []func()
 }
@@ -56,7 +56,7 @@ func (q *QuoteImpl) GetTickSize() decimal.Decimal {
 	return q.symbol.TickSize()
 }
 
-func (q *QuoteImpl) setBestAsk(bestAsk *OBRecord) {
+func (q *QuoteImpl) setBestAsk(bestAsk *PriceLevel) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.bestAsk = bestAsk
@@ -72,51 +72,51 @@ func (q *QuoteImpl) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, de
 	return bestAsk, bestBid
 }
 
-func (q *QuoteImpl) GetBestAsk() *OBRecord {
+func (q *QuoteImpl) GetBestAsk() *PriceLevel {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	return q.bestAsk
 }
 
-func (q *QuoteImpl) setBestBid(bestBid *OBRecord) {
+func (q *QuoteImpl) setBestBid(bestBid *PriceLevel) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.bestBid = bestBid
 }
 
-func (q *QuoteImpl) GetBestBid() *OBRecord {
+func (q *QuoteImpl) GetBestBid() *PriceLevel {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 	return q.bestBid
 }
 
-func (q *QuoteImpl) GetDiffBestAsk() *OBRecord {
+func (q *QuoteImpl) GetDiffBestAsk() *PriceLevel {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
-	return &OBRecord{
+	return &PriceLevel{
 		SeqID:  q.bestAsk.SeqID - q.beforeBestAsk.SeqID,
 		Price:  q.bestAsk.Price.Sub(q.beforeBestAsk.Price),
 		Volume: q.bestAsk.Volume.Sub(q.beforeBestAsk.Volume),
 	}
 }
 
-func (q *QuoteImpl) GetDiffBestBid() *OBRecord {
+func (q *QuoteImpl) GetDiffBestBid() *PriceLevel {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
-	return &OBRecord{
+	return &PriceLevel{
 		SeqID:  q.bestBid.SeqID - q.beforeBestBid.SeqID,
 		Price:  q.bestBid.Price.Sub(q.beforeBestBid.Price),
 		Volume: q.bestBid.Volume.Sub(q.beforeBestBid.Volume),
 	}
 }
 
-func (q *QuoteImpl) setBeforeBestAsk(r *OBRecord) {
+func (q *QuoteImpl) setBeforeBestAsk(r *PriceLevel) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.beforeBestAsk = r
 }
 
-func (q *QuoteImpl) setBeforeBestBid(r *OBRecord) {
+func (q *QuoteImpl) setBeforeBestBid(r *PriceLevel) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.beforeBestBid = r

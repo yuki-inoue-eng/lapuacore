@@ -101,12 +101,12 @@ func (p *OrderBookImpl) resetBySnapshot(snapshot *OrderBookData) {
 
 	// Reset asks
 	if len(snapshot.Asks) > 0 {
-		askMap := newOBRecordMap(domains.QuoteAsk, p.symbol.TickSize())
+		askMap := newPriceLevelMap(domains.QuoteAsk, p.symbol.TickSize())
 		for _, a := range snapshot.Asks {
 			askMap.set(a)
 		}
 		// Overwrite with existing rows if they are newer than the snapshot.
-		p.AsksMap.Range(func(price decimal.Decimal, record OBRecord) bool {
+		p.AsksMap.Range(func(price decimal.Decimal, record PriceLevel) bool {
 			if sr, ok := askMap.Get(price); ok && sr.isOld(record.SeqID) {
 				hasOldRecord = true
 				askMap.set(record)
@@ -118,12 +118,12 @@ func (p *OrderBookImpl) resetBySnapshot(snapshot *OrderBookData) {
 
 	// Reset bids
 	if len(snapshot.Bids) > 0 {
-		bidMap := newOBRecordMap(domains.QuoteBid, p.symbol.TickSize())
+		bidMap := newPriceLevelMap(domains.QuoteBid, p.symbol.TickSize())
 		for _, a := range snapshot.Bids {
 			bidMap.set(a)
 		}
 		// Overwrite with existing rows if they are newer than the snapshot.
-		p.BidsMap.Range(func(price decimal.Decimal, record OBRecord) bool {
+		p.BidsMap.Range(func(price decimal.Decimal, record PriceLevel) bool {
 			if sr, ok := bidMap.Get(price); ok && sr.isOld(record.SeqID) {
 				hasOldRecord = true
 				bidMap.set(record)

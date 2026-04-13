@@ -12,10 +12,10 @@ import (
 type Quote interface {
 	IsReady() bool
 	CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
-	GetBestAsk() *OBRecord
-	GetBestBid() *OBRecord
-	GetDiffBestAsk() *OBRecord
-	GetDiffBestBid() *OBRecord
+	GetBestAsk() *PriceLevel
+	GetBestBid() *PriceLevel
+	GetDiffBestAsk() *PriceLevel
+	GetDiffBestBid() *PriceLevel
 	GetLastExecAt() *time.Time
 	GetLastArrivedAt() *time.Time
 	GetTickSize() decimal.Decimal
@@ -31,8 +31,8 @@ type OrderBook interface {
 	SumVolume(quote domains.Quote, price decimal.Decimal) decimal.Decimal
 	AvgExecPrice(quote domains.Quote, qty decimal.Decimal) decimal.Decimal
 	AvgExecPriceBySide(side domains.Side, qty decimal.Decimal) decimal.Decimal
-	CalculateBidsVolSumMap() *OBRecordMap
-	CalculateAsksVolSumMap() *OBRecordMap
+	CalculateBidsVolSumMap() *PriceLevelMap
+	CalculateAsksVolSumMap() *PriceLevelMap
 	SetDeferUpdateCallBack(callback func())
 	DropDeferUpdateCallBack()
 }

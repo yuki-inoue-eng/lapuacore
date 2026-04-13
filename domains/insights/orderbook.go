@@ -14,8 +14,8 @@ type OrderBookData struct {
 	Type      DataType
 	ExecAt    time.Time // Time when the execution occurred on the exchange
 	ArrivedAt time.Time // Time when the data arrived at lapua
-	Bids      []OBRecord
-	Asks      []OBRecord
+	Bids      []PriceLevel
+	Asks      []PriceLevel
 	SeqID     int64
 }
 
@@ -25,16 +25,16 @@ type OrderBookImpl struct {
 	symbol                *domains.Symbol
 	lastExecAt            *time.Time
 	lastArrivedAt         *time.Time
-	BidsMap               *OBRecordMap
-	AsksMap               *OBRecordMap
+	BidsMap               *PriceLevelMap
+	AsksMap               *PriceLevelMap
 
 	// These are updated by the update handler.
 	// Recomputing them from RecordMap on every access would be wasteful,
 	// so they are cached whenever the order book is updated.
-	currentBestAsk *OBRecord
-	currentBestBid *OBRecord
-	beforeBestAsk  *OBRecord
-	beforeBestBid  *OBRecord
+	currentBestAsk *PriceLevel
+	currentBestBid *PriceLevel
+	beforeBestAsk  *PriceLevel
+	beforeBestBid  *PriceLevel
 
 	updateCallback []func()
 	deferCallback  func()
@@ -43,8 +43,8 @@ type OrderBookImpl struct {
 func NewOrderBook(symbol *domains.Symbol) *OrderBookImpl {
 	return &OrderBookImpl{
 		symbol:  symbol,
-		BidsMap: newOBRecordMap(domains.QuoteBid, symbol.TickSize()),
-		AsksMap: newOBRecordMap(domains.QuoteAsk, symbol.TickSize()),
+		BidsMap: newPriceLevelMap(domains.QuoteBid, symbol.TickSize()),
+		AsksMap: newPriceLevelMap(domains.QuoteAsk, symbol.TickSize()),
 	}
 }
 
@@ -58,22 +58,22 @@ func (p *OrderBookImpl) CalcBestPrice(midPrice decimal.Decimal) (decimal.Decimal
 	return bestAsk, bestBid
 }
 
-func (p *OrderBookImpl) GetBestAsk() *OBRecord {
+func (p *OrderBookImpl) GetBestAsk() *PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.currentBestAsk
 }
 
-func (p *OrderBookImpl) GetBestBid() *OBRecord {
+func (p *OrderBookImpl) GetBestBid() *PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.currentBestBid
 }
 
-func (p *OrderBookImpl) GetDiffBestAsk() *OBRecord {
+func (p *OrderBookImpl) GetDiffBestAsk() *PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return &OBRecord{
+	return &PriceLevel{
 		// The SeqID difference is not very meaningful, but keep it for completeness.
 		SeqID:  p.currentBestAsk.SeqID - p.beforeBestAsk.SeqID,
 		Price:  p.currentBestAsk.Price.Sub(p.beforeBestAsk.Price),
@@ -81,10 +81,10 @@ func (p *OrderBookImpl) GetDiffBestAsk() *OBRecord {
 	}
 }
 
-func (p *OrderBookImpl) GetDiffBestBid() *OBRecord {
+func (p *OrderBookImpl) GetDiffBestBid() *PriceLevel {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return &OBRecord{
+	return &PriceLevel{
 		// The SeqID difference is not very meaningful, but keep it for completeness.
 		SeqID:  p.currentBestBid.SeqID - p.beforeBestBid.SeqID,
 		Price:  p.currentBestBid.Price.Sub(p.beforeBestBid.Price),
@@ -92,25 +92,25 @@ func (p *OrderBookImpl) GetDiffBestBid() *OBRecord {
 	}
 }
 
-func (p *OrderBookImpl) setCurrentBestAsk(r *OBRecord) {
+func (p *OrderBookImpl) setCurrentBestAsk(r *PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.currentBestAsk = r
 }
 
-func (p *OrderBookImpl) setCurrentBestBid(r *OBRecord) {
+func (p *OrderBookImpl) setCurrentBestBid(r *PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.currentBestBid = r
 }
 
-func (p *OrderBookImpl) setBeforeBestAsk(r *OBRecord) {
+func (p *OrderBookImpl) setBeforeBestAsk(r *PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.beforeBestAsk = r
 }
 
-func (p *OrderBookImpl) setBeforeBestBid(r *OBRecord) {
+func (p *OrderBookImpl) setBeforeBestBid(r *PriceLevel) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.beforeBestBid = r
@@ -207,23 +207,23 @@ func (p *OrderBookImpl) AvgExecPriceBySide(side domains.Side, qty decimal.Decima
 	}
 }
 
-func (p *OrderBookImpl) CalculateBidsVolSumMap() *OBRecordMap {
-	bidsVolSumMap := newOBRecordMap(domains.QuoteBid, p.symbol.TickSize())
+func (p *OrderBookImpl) CalculateBidsVolSumMap() *PriceLevelMap {
+	bidsVolSumMap := newPriceLevelMap(domains.QuoteBid, p.symbol.TickSize())
 	sumVol := decimal.Zero
-	p.BidsMap.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+	p.BidsMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		sumVol = sumVol.Add(record.Volume)
-		bidsVolSumMap.set(OBRecord{Price: price, Volume: sumVol})
+		bidsVolSumMap.set(PriceLevel{Price: price, Volume: sumVol})
 		return true
 	})
 	return bidsVolSumMap
 }
 
-func (p *OrderBookImpl) CalculateAsksVolSumMap() *OBRecordMap {
-	asksVolSumMap := newOBRecordMap(domains.QuoteAsk, p.symbol.TickSize())
+func (p *OrderBookImpl) CalculateAsksVolSumMap() *PriceLevelMap {
+	asksVolSumMap := newPriceLevelMap(domains.QuoteAsk, p.symbol.TickSize())
 	sumVol := decimal.Zero
-	p.AsksMap.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+	p.AsksMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		sumVol = sumVol.Add(record.Volume)
-		asksVolSumMap.set(OBRecord{Price: price, Volume: sumVol})
+		asksVolSumMap.set(PriceLevel{Price: price, Volume: sumVol})
 		return true
 	})
 	return asksVolSumMap

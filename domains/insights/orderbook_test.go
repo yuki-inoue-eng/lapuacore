@@ -25,12 +25,12 @@ func orderBookMustDecimal(t *testing.T, s string) decimal.Decimal {
 	return d
 }
 
-func orderBookMakeRecords(t *testing.T, levels []orderBookTestLevel) []OBRecord {
+func orderBookMakeRecords(t *testing.T, levels []orderBookTestLevel) []PriceLevel {
 	t.Helper()
 
-	out := make([]OBRecord, 0, len(levels))
+	out := make([]PriceLevel, 0, len(levels))
 	for _, lv := range levels {
-		out = append(out, OBRecord{
+		out = append(out, PriceLevel{
 			SeqID:  lv.seqID,
 			Price:  orderBookMustDecimal(t, lv.price),
 			Volume: orderBookMustDecimal(t, lv.volume),
@@ -50,9 +50,9 @@ func orderBookSeedMaps(t *testing.T, book *OrderBookImpl, asks []orderBookTestLe
 	}
 }
 
-func orderBookCollectLevels(m *OBRecordMap) []string {
+func orderBookCollectLevels(m *PriceLevelMap) []string {
 	var out []string
-	m.SortedRange(func(price decimal.Decimal, record OBRecord) bool {
+	m.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
 		out = append(out, fmt.Sprintf("%s:%s:%d", record.Price.String(), record.Volume.String(), record.SeqID))
 		return true
 	})

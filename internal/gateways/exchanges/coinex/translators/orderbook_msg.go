@@ -46,8 +46,8 @@ func (t *OrderBookMsgTranslator) Translate(
 func (t *OrderBookMsgTranslator) translateRecords(
 	seqID int64,
 	records [][]string,
-) ([]insights.OBRecord, error) {
-	result := make([]insights.OBRecord, 0, len(records))
+) ([]insights.PriceLevel, error) {
+	result := make([]insights.PriceLevel, 0, len(records))
 	for _, r := range records {
 		price, err := decimal.NewFromString(r[0])
 		if err != nil {
@@ -57,7 +57,7 @@ func (t *OrderBookMsgTranslator) translateRecords(
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, insights.OBRecord{
+		result = append(result, insights.PriceLevel{
 			SeqID:  seqID,
 			Price:  price,
 			Volume: volume,
