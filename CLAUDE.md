@@ -9,7 +9,7 @@ go test ./...                        # Run all tests (also used in CI)
 go test ./domains/deals/...          # Run tests for a specific package
 go test -run TestSendOrder ./domains/deals/...  # Run a single test
 go test -tags=integration ./internal/gateways/exchanges/bybit/ws/  # Run gateway-level integration tests (requires live API)
-go test -tags=integration ./integration_tests/                     # Run full-flow integration tests (requires live API + credentials)
+go test -tags=integration ./integration_tests/                     # Run full-flow integration tests (requires live API, no credentials needed)
 go mod tidy                          # Tidy dependencies (run before commits)
 ```
 
@@ -27,7 +27,7 @@ Strategy Layer (user-provided)
     ↓
 domains/          ← Exchange-agnostic domain logic
   deals/          ← Order state machine, Dealer (per-symbol order manager), Agent interface
-  insights/       ← OrderBook, BookTicker, Trade, BestPriceProvider interface
+  insights/       ← OrderBook, Quote, Trade, PriceLevel (B-Tree backed)
     ↓
 configs/          ← YAML config/secret loading, fsnotify Watcher
 metrics/          ← InfluxDB exporter, Latency/CustomMetric measurements
@@ -61,8 +61,8 @@ mutex/            ← Generic thread-safe Flag, Map, Slice
 - **Deferred operations**: Amend/cancel requests during Sending or Amending states are queued as callbacks, executed when the in-flight operation completes.
 - **Singleton Dealers**: One `Dealer` instance per `Symbol`, retrieved via global registry. Prevents order fragmentation.
 - **Agent interface** (`deals/agent.go`): Exchange adapters implement this to plug into the Dealer. Supports single and batch send/cancel/amend with typed response handlers.
-- **Tick-aware OrderBook**: Records stored by price string at symbol tick granularity. Caches best bid/ask for O(1) access.
-- **BestPriceProvider interface**: Abstraction over OrderBook and BookTicker for strategy-layer access to best prices.
+- **B-Tree OrderBook**: PriceLevelMap uses google/btree for ordered price level storage. Caches best bid/ask for O(1) access; SortedRange is O(n) without per-call sorting.
+- **Quote interface**: Abstraction over OrderBook and BookTicker for strategy-layer access to best prices.
 
 ### Test Patterns
 
