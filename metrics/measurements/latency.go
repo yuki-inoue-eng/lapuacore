@@ -6,8 +6,8 @@ import (
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
 )
 
-// LatencyLog represents a WebSocket latency log entry.
-type LatencyLog struct {
+// Latency represents a WebSocket latency measurement entry.
+type Latency struct {
 	Time        time.Time
 	Topic       string
 	AvgMilliSec *int64
@@ -15,8 +15,8 @@ type LatencyLog struct {
 	MinMilliSec *int64
 }
 
-func (l *LatencyLog) ToPoint(strategyName string) *influxdb3.Point {
-	point := influxdb3.NewPointWithMeasurement(wsLatencyLogsMeasurementName).
+func (l *Latency) ToPoint(strategyName string) *influxdb3.Point {
+	point := influxdb3.NewPointWithMeasurement(wsLatencyMeasurementName).
 		SetTag("topic", l.Topic).
 		SetTimestamp(l.Time)
 	if strategyName != "" {
@@ -28,9 +28,9 @@ func (l *LatencyLog) ToPoint(strategyName string) *influxdb3.Point {
 	return point
 }
 
-type LatencyLogs []*LatencyLog
+type Latencies []*Latency
 
-func (ls LatencyLogs) ToPoints(strategyName string) []*influxdb3.Point {
+func (ls Latencies) ToPoints(strategyName string) []*influxdb3.Point {
 	var points []*influxdb3.Point
 	for _, l := range ls {
 		points = append(points, l.ToPoint(strategyName))

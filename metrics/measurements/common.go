@@ -4,7 +4,7 @@ import "github.com/InfluxCommunity/influxdb3-go/influxdb3"
 
 // defines measurement names
 const (
-	wsLatencyLogsMeasurementName = "ws_latency_logs"
+	wsLatencyMeasurementName = "ws_latency"
 )
 
 // setPointerValue sets a field on an influxdb3.Point if the pointer value is non-nil.

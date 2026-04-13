@@ -21,7 +21,7 @@ type Exporter struct {
 	bucketClient *influxdb3.Client
 
 	// translators
-	latencyLogTranslator *translators.LatencyLogTranslator
+	latencyTranslator *translators.LatencyTranslator
 
 	// components for collection
 	latencyMeasurer []*gateways.LatencyMeasurer
@@ -45,7 +45,7 @@ func newExporter(strategyName string, client *influxdb3.Client, noopMode bool) *
 		noopMode:             noopMode,
 		strategyName:         strategyName,
 		bucketClient:         client,
-		latencyLogTranslator: translators.NewLatencyLogTranslator(),
+		latencyTranslator: translators.NewLatencyTranslator(),
 	}
 }
 
@@ -62,42 +62,42 @@ func (c *Exporter) Start(ctx context.Context) {
 			return
 		case <-exportTicker.C:
 			if c.noopMode {
-				c.discardWSLatencyLogs()
+				c.discardWSLatencies()
 				continue
 			}
-			c.collectAndExportLatencyLogs(ctx)
+			c.collectAndExportLatencies(ctx)
 		}
 	}
 }
 
-func (c *Exporter) discardWSLatencyLogs() {
+func (c *Exporter) discardWSLatencies() {
 	for _, measurer := range c.latencyMeasurer {
 		measurer.Export()
 	}
 }
 
-func (c *Exporter) collectAndExportLatencyLogs(ctx context.Context) {
+func (c *Exporter) collectAndExportLatencies(ctx context.Context) {
 	go func() {
-		logs := c.collectLatencyLogs()
-		if err := c.exportLatencyLogs(ctx, logs); err != nil {
+		latencies := c.collectLatencies()
+		if err := c.exportLatencies(ctx, latencies); err != nil {
 			slog.Error(err.Error())
 		}
 	}()
 }
 
-func (c *Exporter) collectLatencyLogs() []*measurements.LatencyLog {
-	var logs measurements.LatencyLogs
+func (c *Exporter) collectLatencies() []*measurements.Latency {
+	var latencies measurements.Latencies
 	for _, measurer := range c.latencyMeasurer {
-		logs = append(logs, c.latencyLogTranslator.TranslateToLatencyLogs(measurer.Export())...)
+		latencies = append(latencies, c.latencyTranslator.TranslateToLatencies(measurer.Export())...)
 	}
-	return logs
+	return latencies
 }
 
-func (c *Exporter) exportLatencyLogs(ctx context.Context, logs measurements.LatencyLogs) error {
-	if len(logs) == 0 {
+func (c *Exporter) exportLatencies(ctx context.Context, latencies measurements.Latencies) error {
+	if len(latencies) == 0 {
 		return nil
 	}
-	if err := c.bucketClient.WritePoints(ctx, logs.ToPoints(c.strategyName)...); err != nil {
+	if err := c.bucketClient.WritePoints(ctx, latencies.ToPoints(c.strategyName)...); err != nil {
 		return err
 	}
 	return nil
