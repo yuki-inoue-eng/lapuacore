@@ -1,9 +1,12 @@
 package bybit
 
 import (
+	"log/slog"
+
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
 	ex "github.com/yuki-inoue-eng/lapuacore/initializers/exchanges"
+	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/translators"
 	"github.com/yuki-inoue-eng/lapuacore/internal/gateways/exchanges/bybit/ws/topics"
 )
 
@@ -12,8 +15,9 @@ import (
 var Insights *bybitInsights
 
 type bybitInsights struct {
-	trades     map[*domains.Symbol]*insights.Trade
-	orderBooks map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBook
+	trades      map[*domains.Symbol]*insights.Trade
+	orderBooks  map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBook
+	bookTickers map[*domains.Symbol]*insights.BookTicker
 }
 
 func (i *bybitInsights) EXName() string {
@@ -40,12 +44,25 @@ func (i *bybitInsights) GetTrade(symbol *domains.Symbol) *insights.Trade {
 	return tr
 }
 
+func (i *bybitInsights) GetBookTicker(symbol *domains.Symbol) *insights.BookTicker {
+	bt, ok := i.bookTickers[symbol]
+	if !ok {
+		return nil
+	}
+	return bt
+}
+
 func (i *bybitInsights) IsEverythingReady() bool {
 	for _, o := range i.orderBooks {
 		for _, ob := range o {
 			if !ob.IsReady() {
 				return false
 			}
+		}
+	}
+	for _, bt := range i.bookTickers {
+		if !bt.IsReady() {
+			return false
 		}
 	}
 	return true
@@ -55,6 +72,7 @@ func (i *bybitInsights) IsEverythingReady() bool {
 func InitInsights(
 	tradeSymbols []*domains.Symbol,
 	obDesignators []*OrderBookDesignator,
+	btSymbols []*domains.Symbol,
 ) {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
@@ -94,6 +112,26 @@ func InitInsights(
 		linearOBTopics = append(linearOBTopics, obTopic)
 	}
 
+	// setup bookTickers (via orderbook depth=1 adapter)
+	bookTickers := map[*domains.Symbol]*insights.BookTicker{}
+	adapter := translators.NewBookTickerAdapter()
+	for _, symbol := range btSymbols {
+		bt := insights.NewBookTicker(symbol)
+		bookTickers[symbol] = bt
+
+		designator := &OrderBookDesignator{Symbol: symbol, Depth: topics.LinearOBDepth1}
+		obTopic := gatewayManager.getOrderBookTopic(designator)
+		obTopic.SetHandler(func(data *insights.OrderBookData) {
+			btData, err := adapter.Convert(data)
+			if err != nil {
+				slog.Error("failed to convert orderbook to bookticker", "error", err)
+				return
+			}
+			bt.Update(btData)
+		})
+		linearOBTopics = append(linearOBTopics, obTopic)
+	}
+
 	// set topics on public channel
 	if gatewayManager.publicLinearChannel != nil {
 		gatewayManager.publicLinearChannel.SetTopics(linearTradeTopics)
@@ -101,8 +139,9 @@ func InitInsights(
 	}
 
 	ins := &bybitInsights{
-		trades:     trades,
-		orderBooks: orderBooks,
+		trades:      trades,
+		orderBooks:  orderBooks,
+		bookTickers: bookTickers,
 	}
 	gatewayManager.setInsights(ins)
 	Insights = ins
