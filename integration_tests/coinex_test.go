@@ -17,13 +17,12 @@ import (
 // InitAndStartNoopMode -> InitGatewayManager -> InitInsights -> StartGateway
 // then checks that insights become ready with valid market data.
 func TestCoinExInsightsFlow(t *testing.T) {
-	cred := requireCoinExCredential(t)
 	lapua.InitAndStartNoopMode()
 	defer lapua.Cancel()
 
 	symbol := domains.SymbolCoinExFuturesBTCUSDT
 
-	coinex.InitGatewayManager(cred, 1)
+	coinex.InitGatewayManager(nil, 1)
 	coinex.InitInsights(
 		[]*domains.Symbol{symbol},
 		[]*domains.Symbol{symbol},

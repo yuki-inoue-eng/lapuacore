@@ -18,13 +18,12 @@ import (
 // InitAndStartNoopMode -> InitGatewayManager -> InitInsights -> StartGateway
 // then checks that insights become ready with valid market data.
 func TestBybitInsightsFlow(t *testing.T) {
-	cred := requireBybitCredential(t)
 	lapua.InitAndStartNoopMode()
 	defer lapua.Cancel()
 
 	symbol := domains.SymbolBybitLinearBTCUSDT
 
-	bybit.InitGatewayManager(cred, 1)
+	bybit.InitGatewayManager(nil, 1)
 	bybit.InitInsights(
 		[]*domains.Symbol{symbol},
 		[]*bybit.OrderBookDesignator{
