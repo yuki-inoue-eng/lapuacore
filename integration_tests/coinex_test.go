@@ -29,9 +29,10 @@ func TestCoinExInsightsFlow(t *testing.T) {
 		[]*domains.Symbol{symbol},
 	)
 
+	coinex.StartGateway()
+
 	ctx, cancel := context.WithTimeout(lapua.Ctx, 30*time.Second)
 	defer cancel()
-	coinex.StartGateway(ctx)
 
 	// Poll until insights are ready or timeout
 	ready := waitForReady(ctx, func() bool {

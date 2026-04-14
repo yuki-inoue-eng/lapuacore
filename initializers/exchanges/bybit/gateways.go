@@ -1,7 +1,6 @@
 package bybit
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -104,23 +103,23 @@ func (m *GatewayManager) getOrderBookTopic(designator *OrderBookDesignator) *top
 	return m.orderBookTopicMap[designator]
 }
 
-// StartGateway launches all gateway goroutines.
-func StartGateway(ctx context.Context) {
+// StartGateway launches all gateway goroutines using lapua.Ctx.
+func StartGateway() {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
 	}
 
-	go gatewayManager.latencyMeasurer.Start(ctx)
+	go gatewayManager.latencyMeasurer.Start(lapua.Ctx)
 
 	if gatewayManager.privateChannel != nil {
 		go func() {
-			if err := gatewayManager.privateChannel.Start(ctx); err != nil {
+			if err := gatewayManager.privateChannel.Start(lapua.Ctx); err != nil {
 				panic(err)
 			}
 		}()
 	}
 
 	if gatewayManager.publicLinearChGroup != nil {
-		go gatewayManager.publicLinearChGroup.Start(ctx)
+		go gatewayManager.publicLinearChGroup.Start(lapua.Ctx)
 	}
 }

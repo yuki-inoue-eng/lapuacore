@@ -32,9 +32,10 @@ func TestBybitInsightsFlow(t *testing.T) {
 		[]*domains.Symbol{symbol},
 	)
 
+	bybit.StartGateway()
+
 	ctx, cancel := context.WithTimeout(lapua.Ctx, 30*time.Second)
 	defer cancel()
-	bybit.StartGateway(ctx)
 
 	// Poll until insights are ready or timeout
 	ready := waitForReady(ctx, func() bool {

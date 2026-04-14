@@ -57,8 +57,8 @@ func (i *coinexInsights) IsEverythingReady() bool {
 			return false
 		}
 	}
-	for _, bt := range i.quotes {
-		if !bt.IsReady() {
+	for _, q := range i.quotes {
+		if !q.IsReady() {
 			return false
 		}
 	}
@@ -66,7 +66,7 @@ func (i *coinexInsights) IsEverythingReady() bool {
 }
 
 // InitInsights initializes CoinEx market data for the given symbols.
-func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, btSymbols []*domains.Symbol) {
+func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, quoteSymbols []*domains.Symbol) {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
 	}
@@ -102,16 +102,16 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 
 	// setup quotes
 	quotes := map[*domains.Symbol]*insights.QuoteImpl{}
-	for _, symbol := range btSymbols {
+	for _, symbol := range quoteSymbols {
 		quotes[symbol] = insights.NewQuote(symbol)
 	}
 
-	// setup bookTicker topics
-	var btTopics []gateways.Topic
-	for symbol, bt := range quotes {
-		btTopic := topics.NewBookTickerTopic(symbol)
-		btTopic.SetHandler(bt.Update)
-		btTopics = append(btTopics, btTopic)
+	// setup quote topics
+	var quoteTopics []gateways.Topic
+	for symbol, quote := range quotes {
+		quoteTopic := topics.NewBookTickerTopic(symbol)
+		quoteTopic.SetHandler(quote.Update)
+		quoteTopics = append(quoteTopics, quoteTopic)
 		_ = symbol // used as map key
 	}
 
@@ -119,7 +119,7 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, b
 	if gatewayManager.publicChGroup != nil {
 		gatewayManager.publicChGroup.SetTopics(tradeTopics)
 		gatewayManager.publicChGroup.SetTopics(obTopics)
-		gatewayManager.publicChGroup.SetTopics(btTopics)
+		gatewayManager.publicChGroup.SetTopics(quoteTopics)
 	}
 
 	ins := &coinexInsights{
