@@ -12,7 +12,7 @@ Go 1.26 以上が必要です。
 
 lapuacore の起動は以下の 4 ステップで行います。
 
-1. **InitAndStartNoopMode** — コアコンテキストとメトリクス（noop）を初期化
+1. **InitAndStartNoopMode** — コアコンテキストとメトリクス（noop）を初期化。グローバルな `lapua.Ctx` / `lapua.Cancel` が生成され、戦略レイヤーではこのコンテキストを基準にライフサイクルを管理します
 2. **InitGatewayManager** — 取引所ゲートウェイの初期化（認証情報・接続数を指定）
 3. **InitInsights** — マーケットデータの購読設定（Trade / OrderBook / Quote）
 4. **StartGateway** — WebSocket 接続を開始し、データ受信を開始
