@@ -1,0 +1,5 @@
+strategy:
+  name: book-monitor
+
+params:
+  symbol: CoinExFuturesBTCUSDT
