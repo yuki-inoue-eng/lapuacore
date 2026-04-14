@@ -1,82 +1,134 @@
 # lapuacore
 
-Exchange-agnostic core for low-latency trading systems.
+Exchange-agnostic low-latency trading system core library (Go)
 
-lapuacore is a reduced-feature edition of **lapua**, a private HFT library used to run a market-making operation on centralized exchanges. lapua provides exchange-independent domain models, adapters for multiple exchanges, and shared infrastructure for order management and market-data processing — all decoupled from any specific trading strategy. lapuacore inherits that design philosophy and exposes it as a minimal, readable codebase.
+[Japanese](README.ja.md)
 
 ## Background
 
-lapua was built to solve a practical problem: trading across multiple exchanges without duplicating logic for each venue. The author operated as an official market maker on CoinEx using lapua as the underlying trading engine, sustaining approximately $10 M/month in liquidity provision at its peak.
+**lapuacore** inherits the architecture and design philosophy of **lapua**, a private HFT library developed and operated by the author, and restructures it for public release.
+The author served as an official market maker on CoinEx using lapua, providing approximately $10M/month in liquidity at peak.
+lapuacore provides domain models, gateway abstractions, and concurrency primitives, with exchange adapters implemented for CoinEx and Bybit.
 
-lapuacore extracts the architectural foundations of lapua — the domain models, gateway abstractions, and concurrency primitives — into a standalone package. Adapters for two exchanges and sample code demonstrating end-to-end order execution are currently under development.
 
 > **Note:** This project is a design reference, not an actively maintained OSS library.
 
-## Design Principles
+## Design Highlights
 
-**Exchange as a replaceable dependency.** Each exchange has its own WebSocket frame format, order lifecycle semantics, and rate-limit rules. lapuacore defines a Gateway interface that normalises these differences. Exchange adapters implement the interface; the rest of the system operates against the abstraction.
+### Exchange-Agnostic Domain Layer
 
-**Internal order-state authority.** Relying on the exchange as the source of truth for order state introduces round-trip latency that matters at high frequency. lapuacore maintains its own order state machine and reconciles asynchronous events — fills, cancels, expiries — internally, so consumers always have a consistent view.
+Each exchange differs in WebSocket frame format, order lifecycle semantics, and rate-limit rules. lapuacore absorbs these differences through a Gateway interface, allowing domain logic to operate solely against the abstraction. Adding or swapping exchange adapters has zero impact on domain code. Market data from multiple exchanges can be handled uniformly, enabling cross-exchange strategy development.
 
-**Strategy-independent infrastructure.** The library provides building blocks — normalised market-data streams, an order manager, a synchronised order book — without prescribing what to trade or when. Strategy logic is the consumer's responsibility.
+### Asynchronous Order Execution
+
+Treating the exchange as the source of truth introduces round-trip latency on every state check. lapuacore manages order state transitions through an internal state machine and reconciles asynchronous events (fills, cancels, expiries) internally.
+
+```
+Market:  Born -> Sending -> Done
+
+Limit:   Born -> Sending -> Pending <-> Amending -> Done
+                              |                      ^
+                          Canceling -----------------+
+```
+
+For limit orders, Amend / Cancel requests issued during Sending / Amending are automatically executed upon completion of the preceding operation. Multiple Amend requests retain only the last one, and Cancel overwrites any existing Amend.
+
+### B-Tree Order Book
+
+The order book (OrderBook) uses `google/btree` for price level management.
+
+- **Best bid/ask retrieval**: O(1) -- cached
+- **Price-ordered iteration**: O(n) -- leverages B-Tree structural ordering, no sorting required
+- **Cumulative volume / average execution price**: computed by forward traversal of the B-Tree
+
+### Event-Driven Callback Design
+
+Callbacks can be registered for market data and order lifecycle events. The strategy layer can react immediately to state changes without polling.
+
+**Market State Changes**
+- Order book updates
+- Best price (Quote) updates
+- Exchange trade data (Trade)
+
+**Order Lifecycle**
+- Order accepted (Sending -> Pending)
+- Amendment completed (Amending -> Pending)
+- Cancellation completed (Canceling -> Done)
+- Filled (-> Done)
+- Partially filled
+- Order reject, amendment reject, cancellation reject
+
+### Redundant WebSocket for High Availability
+
+lapuacore manages N redundant WebSocket connections via ChannelGroup, subscribing to the same topics in parallel. A TTL cache eliminates duplicate messages, processing only the first data to arrive. This prevents market data gaps from single connection drops and reduces average message delivery time.
 
 ## Architecture
 
 ```
-Strategy Layer  (user-provided)
-        │
-        ▼
-┌──────────────────────────────────────┐
-│            lapuacore                 │
-│                                     │
-│  domains/                           │
-│    ├── Order      state machine     │
-│    ├── OrderBook  L2 book           │
-│    └── Market Data                  │
-│                                     │
-│  internal/gateways/                 │
-│    └── Gateway interface            │
-│                                     │
-│  mutex/                             │
-│    └── sync utilities               │
-├──────────────────────────────────────┤
-│  Exchange Adapters  (in progress)   │
-│    ├── CoinEx                       │
-│    └── (+ one additional exchange)  │
-└──────────────────────────────────────┘
-        │
-        ▼
-   Exchange APIs  (WebSocket / REST)
+Strategy Layer (user-provided)
+        |
+        v
++---------------------------------------------+
+|              lapuacore                       |
+|                                              |
+|  domains/                                    |
+|    +-- deals/     Order state machine,       |
+|    |              Dealer, Agent               |
+|    +-- insights/  OrderBook, Quote,          |
+|                   Trade, PriceLevel          |
+|                                              |
+|  initializers/                               |
+|    +-- lapua/     Startup orchestration      |
+|    +-- exchanges/ Per-exchange init          |
+|       +-- coinex/                            |
+|       +-- bybit/                             |
+|                                              |
+|  configs/    YAML config + hot reload        |
+|  metrics/    InfluxDB + latency              |
+|  mutex/      Thread-safe primitives          |
++----------------------------------------------+
+|  internal/gateways/exchanges/                |
+|    +-- coinex/  REST + WebSocket             |
+|    +-- bybit/   REST + WebSocket             |
++----------------------------------------------+
+        |
+        v
+   Exchange APIs (WebSocket / REST)
 ```
 
-## Package Overview
+## Project Structure
 
 | Package | Role |
 |---|---|
-| `domains/` | Core domain models. **Order** manages state transitions across the order lifecycle. **OrderBook** maintains an L2 book representation. **Market Data** handles price and tick normalisation. |
-| `internal/gateways/` | Gateway interface that exchange adapters implement. Covers order submission, cancellation, market-data subscription, and connection lifecycle. |
-| `mutex/` | Synchronisation utilities for concurrent order and book updates. |
+| `domains/deals` | Order state machine, Dealer (per-symbol singleton order manager), Agent interface |
+| `domains/insights` | OrderBook (B-Tree order book), Quote (best bid/ask), Trade (execution data stream) |
+| `initializers/` | Startup orchestration. `lapua/` for overall init, `exchanges/` for per-exchange init |
+| `configs/` | YAML config/secret loading, fsnotify hot reload |
+| `metrics/` | InfluxDB exporter, WebSocket latency and custom metric measurement |
+| `internal/gateways/` | Exchange adapter implementation. REST API (HMAC signing, rate limiter), WebSocket (channels, topics, auth, health check) |
+| `mutex/` | Generic thread-safe types (Flag, Map, Slice) |
 
-## Getting Started
+## Supported Exchanges
 
-```bash
-go get github.com/yuki-inoue-eng/lapuacore
-```
+| Exchange | Product | Symbols |
+|---|---|---|
+| CoinEx | Futures | BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT |
+| Bybit | Linear | BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT |
 
-Requires Go 1.26+.
+## Dependencies
 
-### Dependencies
-
-| Dependency | Purpose |
+| Library | Purpose |
 |---|---|
+| `google/btree` | B-Tree price level management for order book |
 | `gorilla/websocket` | WebSocket stream handling |
 | `shopspring/decimal` | Arbitrary-precision decimal arithmetic for price/quantity |
-| `google/uuid` | Unique identifiers |
-| `rs/xid` | Globally unique, sortable IDs |
+| `fsnotify/fsnotify` | Config file hot reload |
+| `InfluxCommunity/influxdb3-go` | Metrics export |
+| `hashicorp/go-retryablehttp` | HTTP client with retries |
 
-## Examples
+## Documentation
 
-*Coming soon.* The `examples/` directory will contain sample code that connects to a live exchange, subscribes to market data, and places/cancels orders.
+- Getting Started -- *coming soon*
 
 ## License
 
