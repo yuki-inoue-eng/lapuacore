@@ -44,7 +44,7 @@ Limit:   Born → Sending → Pending ⇄ Amending → Done
 
 ### イベント駆動のコールバック設計
 
-REST / WebSocket レスポンスはハンドラコールバックを呼び出す設計です。ドメインコードに明示的な goroutine 管理を持ち込まず、コールバックの dispatch で `go callback(o)` を使用します。注文ライフサイクルの各イベントにコールバックを登録できます。
+注文ライフサイクルとマーケットデータの各イベントにコールバックを登録できます。ストラテジー層はポーリングなしに、状態変化に即座に反応できます。
 
 - 注文受理（Sending → Pending）
 - 変更完了（Amending → Pending）
