@@ -128,7 +128,8 @@ Strategy Layer (user-provided)
 
 ## Documentation
 
-- Getting Started -- *coming soon*
+- [Getting Started](docs/getting-started.md)
+- [Getting Started (日本語)](docs/getting-started.ja.md)
 
 ## License
 
