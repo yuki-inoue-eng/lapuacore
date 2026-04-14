@@ -41,5 +41,7 @@ type OrderBook interface {
 // It excludes Update which is only used by internal gateways.
 type Trade interface {
 	IsReady() bool
-	SetHandler(handler TradeDataHandler)
+	// SetUpdateCallback registers a callback invoked on each trade update.
+	// msg contains the latest execution data received from the exchange.
+	SetUpdateCallback(callback func(msg TradeDataList))
 }

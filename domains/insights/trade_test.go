@@ -146,7 +146,7 @@ func TestTrade_IsReady(t *testing.T) {
 	}
 }
 
-func TestTrade_SetHandler(t *testing.T) {
+func TestTrade_SetUpdateCallback(t *testing.T) {
 	tests := []struct {
 		name         string
 		handlerCount int
@@ -167,7 +167,7 @@ func TestTrade_SetHandler(t *testing.T) {
 			counts := make([]int, tt.handlerCount)
 			for i := 0; i < tt.handlerCount; i++ {
 				idx := i
-				tr.SetHandler(func(msg TradeDataList) {
+				tr.SetUpdateCallback(func(msg TradeDataList) {
 					counts[idx]++
 				})
 			}
