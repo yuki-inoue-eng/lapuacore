@@ -26,9 +26,11 @@ lapuacore では ドメインモデル、ゲートウェイ抽象化、並行処
 ```
 Market:  Born → Sending → Done
 
-Limit:   Born → Sending → Pending ⇄ Amending → Done
-                              ↓                    ↑
-                          Canceling ───────────────┘
+Limit:   Born → Sending → Pending ⇄ Amending
+                              │
+                              ├→ Done
+                              │      ↑
+                          Canceling ─┘
 ```
 
 指値注文では、Sending / Amending 中に実行された Amend / Cancel は先行オペレーションの完了を待って自動実行されます。複数回の Amend は最後のリクエストのみ保持し、Cancel は既存の Amend を上書きします。

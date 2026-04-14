@@ -24,11 +24,13 @@ Each exchange differs in WebSocket frame format, order lifecycle semantics, and 
 Treating the exchange as the source of truth introduces round-trip latency on every state check. lapuacore manages order state transitions through an internal state machine and reconciles asynchronous events (fills, cancels, expiries) internally.
 
 ```
-Market:  Born -> Sending -> Done
+Market:  Born → Sending → Done
 
-Limit:   Born -> Sending -> Pending <-> Amending -> Done
-                              |                      ^
-                          Canceling -----------------+
+Limit:   Born → Sending → Pending ⇄ Amending
+                              │
+                              ├→ Done
+                              │      ↑
+                          Canceling ─┘
 ```
 
 For limit orders, Amend / Cancel requests issued during Sending / Amending are automatically executed upon completion of the preceding operation. Multiple Amend requests retain only the last one, and Cancel overwrites any existing Amend.
