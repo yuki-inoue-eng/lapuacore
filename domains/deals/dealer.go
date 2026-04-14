@@ -11,7 +11,10 @@ import (
 )
 
 // dealerInstances is a per-symbol singleton registry.
-var dealerInstances = map[*domains.Symbol]*DealerImpl{}
+var (
+	dealerMu        sync.Mutex
+	dealerInstances = map[*domains.Symbol]*DealerImpl{}
+)
 
 type DealerImpl struct {
 	sync.RWMutex
@@ -39,6 +42,9 @@ func (d *DealerImpl) GetCurrentPosition() *Position       { return d.CurrentPosi
 
 // NewDealer returns the DealerImpl for the given symbol, creating it if it does not exist.
 func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *DealerImpl {
+	dealerMu.Lock()
+	defer dealerMu.Unlock()
+
 	if ins, exists := dealerInstances[symbol]; exists {
 		return ins
 	}
