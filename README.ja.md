@@ -99,37 +99,37 @@ Strategy Layer (user-provided)
 
 ## Project Structure
 
-| パッケージ | 役割 |
-|---|---|
-| `domains/deals` | 注文ステートマシン、Dealer（シンボルごとのシングルトン注文マネージャー）、Agent interface |
-| `domains/insights` | OrderBook（B-Tree 板情報）、Quote（最良気配）、Trade（約定データストリーム） |
-| `initializers/` | 起動オーケストレーション。`lapua/` で全体初期化、`exchanges/` で取引所別の初期化 |
-| `configs/` | YAML 設定・シークレットの読み込み、fsnotify によるホットリロード |
-| `metrics/` | InfluxDB エクスポーター、WebSocket レイテンシ・カスタムメトリクス計測 |
+| パッケージ                | 役割                                                                   |
+|----------------------|----------------------------------------------------------------------|
+| `domains/deals`      | 注文ステートマシン、Dealer（シンボルごとのシングルトン注文マネージャー）、Agent interface              |
+| `domains/insights`   | OrderBook（B-Tree 板情報）、Quote（最良気配）、Trade（約定データストリーム）                  |
+| `initializers/`      | 起動オーケストレーション。`lapua/` で全体初期化、`exchanges/` で取引所別の初期化                  |
+| `configs/`           | YAML 設定・シークレットの読み込み、fsnotify によるホットリロード                              |
+| `metrics/`           | InfluxDB エクスポーター、WebSocket レイテンシ・カスタムメトリクス計測                         |
 | `internal/gateways/` | 取引所アダプタ実装。REST API（HMAC 署名、レートリミッター）、WebSocket（チャネル、トピック、認証、ヘルスチェック） |
-| `mutex/` | 汎用スレッドセーフ型（Flag, Map, Slice） |
+| `mutex/`             | 汎用スレッドセーフ型（Flag, Map, Slice）                                         |
 
 ## Supported Exchanges
 
-| 取引所 | プロダクト | シンボル |
-|---|---|---|
-| CoinEx | Futures | BTCUSDT, ETHUSDT, XRPUSDT, SOLUSDT |
-| Bybit | Linear | BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT |
+| 取引所    | プロダクト   | シンボル                               |
+|--------|---------|------------------------------------|
+| CoinEx | Futures | BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT |
+| Bybit  | Linear  | BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT |
 
 ## Dependencies
 
-| ライブラリ | 用途 |
-|---|---|
-| `google/btree` | 板情報の価格帯管理（B-Tree） |
-| `gorilla/websocket` | WebSocket ストリーム処理 |
-| `shopspring/decimal` | 価格・数量の任意精度十進演算 |
-| `fsnotify/fsnotify` | 設定ファイルのホットリロード |
-| `InfluxCommunity/influxdb3-go` | メトリクスエクスポート |
-| `hashicorp/go-retryablehttp` | リトライ付き HTTP クライアント |
+| ライブラリ                          | 用途                 |
+|--------------------------------|--------------------|
+| `google/btree`                 | 板情報の価格帯管理（B-Tree）  |
+| `gorilla/websocket`            | WebSocket ストリーム処理  |
+| `shopspring/decimal`           | 価格・数量の任意精度十進演算     |
+| `fsnotify/fsnotify`            | 設定ファイルのホットリロード     |
+| `InfluxCommunity/influxdb3-go` | メトリクスエクスポート        |
+| `hashicorp/go-retryablehttp`   | リトライ付き HTTP クライアント |
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.ja.md) — 初期化フローとサンプルコード
+- Getting Started — *coming soon*
 
 ## License
 
