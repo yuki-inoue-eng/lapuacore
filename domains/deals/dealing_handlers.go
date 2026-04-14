@@ -261,7 +261,7 @@ func (d *DealerImpl) acceptFilled(order *Order) {
 }
 
 func (d *DealerImpl) acceptPartiallyFilled(order *Order) {
-	if order.orderType == domains.OrderTypeLimitIOC {
+	if order.GetOrderType() == domains.OrderTypeLimitIOC {
 		order.setStatus(OrderStatusDone)
 		order.setOrderDoneReason(OrderDoneReasonPartiallyFilledAndCanceled)
 		d.LivingOrders.Delete(order.GetID())
@@ -316,7 +316,7 @@ func (d *DealerImpl) rejectCreates(orders []*Order) {
 	for i := range orders {
 		order := orders[i]
 		order.WithOpLock(func() {
-			d.rejectCreate(orders[i])
+			d.rejectCreate(order)
 		})
 	}
 }
