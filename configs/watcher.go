@@ -90,13 +90,13 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 	switch event.Name {
 	case w.configFilePath:
 		if err := w.configFileEventHandler(event); err != nil {
-			slog.Error(err.Error())
+			slog.Error("failed to handle config file event", "error", err)
 			return
 		}
 		slog.Info("config file updated")
 	case w.secretFilePath:
 		if err := w.secretFileEventHandler(event); err != nil {
-			slog.Error(err.Error())
+			slog.Error("failed to handle secret file event", "error", err)
 			return
 		}
 		slog.Info("secret file updated")

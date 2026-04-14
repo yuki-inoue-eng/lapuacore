@@ -112,7 +112,7 @@ func (a *author) Start(ctx context.Context) {
 				slog.Info(fmt.Sprintf("%s private channel authenticated", a.exName))
 				continue
 			}
-			slog.Error(fmt.Sprintf("%s auth failed: %s", a.exName, result.errDetail))
+			slog.Error("auth failed", "exchange", a.exName, "detail", result.errDetail)
 			if a.retryCount >= a.numOfRetry {
 				a.authErrChan <- AuthErrRetryLimitReached
 				return

@@ -51,7 +51,7 @@ func (mg *Manager) SubscribeRequests() [][]byte {
 		Args: topicNames,
 	})
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to marshal subscribe message: %v", err))
+		slog.Error("failed to marshal subscribe message", "error", err)
 		return nil
 	}
 	return [][]byte{msg}

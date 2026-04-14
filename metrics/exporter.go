@@ -98,7 +98,7 @@ func (c *Exporter) collectAndExportLatencies(ctx context.Context) {
 	go func() {
 		latencies := c.collectLatencies()
 		if err := c.exportLatencies(ctx, latencies); err != nil {
-			slog.Error(err.Error())
+			slog.Error("failed to export latencies", "error", err)
 		}
 	}()
 }
@@ -110,7 +110,7 @@ func (c *Exporter) collectAndExportCustomMetrics(ctx context.Context) {
 		c.customMetricQueue = nil
 		c.mu.Unlock()
 		if err := c.exportCustomMetrics(ctx, metrics); err != nil {
-			slog.Error(err.Error())
+			slog.Error("failed to export custom metrics", "error", err)
 		}
 	}()
 }
