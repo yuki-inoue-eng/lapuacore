@@ -52,6 +52,9 @@ internal/gateways/exchanges/   ← Exchange-specific adapters
     translators/  ← DTO ↔ domain model conversion
     ↓
 mutex/            ← Generic thread-safe Flag, Map, Slice
+pkg/display/      ← Reusable terminal display components (OrderBook viewer)
+examples/         ← Runnable sample strategies (e.g. book-monitor)
+docs/             ← Getting-started guides (EN/JA)
 ```
 
 ### Key Design Decisions
