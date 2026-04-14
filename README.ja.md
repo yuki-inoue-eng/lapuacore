@@ -61,7 +61,7 @@ Limit:   Born → Sending → Pending ⇄ Amending → Done
 
 ### 冗長 WebSocket + 重複排除
 
-単一の WebSocket 接続が切断されると板情報が途切れるリスクがあります。lapuacore は ChannelGroup で N 本の冗長接続を管理し、同一トピックを並行購読します。TTL キャッシュにより重複メッセージを排除し、最初に到着したデータのみを処理します。
+lapuacore は ChannelGroup で N 本の冗長 WebSocket 接続を管理し、同一トピックを並行購読します。TTL キャッシュにより重複メッセージを排除し、最初に到着したデータのみを処理します。単一接続の切断による板情報の途切れを防ぐための設計です。
 
 ## Architecture
 
