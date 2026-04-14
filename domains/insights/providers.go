@@ -41,5 +41,5 @@ type OrderBook interface {
 // It excludes Update which is only used by internal gateways.
 type Trade interface {
 	IsReady() bool
-	SetHandler(handler TradeDataHandler)
+	SetUpdateCallback(handler TradeDataHandler)
 }
