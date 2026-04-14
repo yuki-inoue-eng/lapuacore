@@ -41,5 +41,5 @@ type OrderBook interface {
 // It excludes Update which is only used by internal gateways.
 type Trade interface {
 	IsReady() bool
-	SetUpdateCallback(handler TradeDataHandler)
+	SetUpdateCallback(callback func(TradeDataList))
 }
