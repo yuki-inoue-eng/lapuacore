@@ -39,7 +39,10 @@ func TestRateLimiter_QuotaDecreases(t *testing.T) {
 	l := newRateLimiter()
 
 	assert.Equal(t, nil, l.consume(GroupOrder, 5))
-	assert.Equal(t, limitOrder-5, l.quotas[GroupOrder])
+	l.mu.Lock()
+	got := l.quotas[GroupOrder]
+	l.mu.Unlock()
+	assert.Equal(t, limitOrder-5, got)
 }
 
 func TestRateLimiter_GroupIndependence(t *testing.T) {
@@ -50,7 +53,10 @@ func TestRateLimiter_GroupIndependence(t *testing.T) {
 
 	// Cancel quota should be unaffected
 	assert.Equal(t, nil, l.consume(GroupCancel, 1))
-	assert.Equal(t, limitCancel-1, l.quotas[GroupCancel])
+	l.mu.Lock()
+	cancelQuota := l.quotas[GroupCancel]
+	l.mu.Unlock()
+	assert.Equal(t, limitCancel-1, cancelQuota)
 }
 
 func TestRateLimiter_QuotaRecovery(t *testing.T) {
@@ -67,5 +73,8 @@ func TestRateLimiter_QuotaRecovery(t *testing.T) {
 
 	// Should succeed after recovery
 	assert.Equal(t, nil, l.consume(GroupOrder, 1))
-	assert.Equal(t, limitOrder-1, l.quotas[GroupOrder])
+	l.mu.Lock()
+	got := l.quotas[GroupOrder]
+	l.mu.Unlock()
+	assert.Equal(t, limitOrder-1, got)
 }
