@@ -32,6 +32,7 @@ import (
 
 func main() {
 	// 1. Core initialization (noop mode: no real metrics export)
+	//    Initializes global lapua.Ctx / lapua.Cancel used throughout the strategy layer.
 	lapua.InitAndStartNoopMode()
 	defer lapua.Cancel()
 
