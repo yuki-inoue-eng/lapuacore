@@ -54,11 +54,11 @@ func initFilePaths() {
 
 // InitAndStart initializes and starts all core components using config and secret files.
 // File paths are read from environment variables: LAPUA_CONFIG_PATH, LAPUA_SECRET_PATH, LAPUA_LOG_PATH.
-func InitAndStart(watcherOpts ...configs.Option) {
+func InitAndStart() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher := configs.NewWatcher(configFilePath, secretFilePath, watcherOpts...)
+	watcher := configs.NewWatcher(configFilePath, secretFilePath)
 	config := watcher.GetConfig()
 	Secrets = watcher.GetSecret()
 	Params = config.Params
@@ -80,11 +80,11 @@ func InitAndStart(watcherOpts ...configs.Option) {
 // InitAndStartDCMode initializes and starts in data curator mode.
 // The bucketName from config params is used as the Discord username.
 // File paths are read from environment variables: LAPUA_CONFIG_PATH, LAPUA_SECRET_PATH, LAPUA_LOG_PATH.
-func InitAndStartDCMode(watcherOpts ...configs.Option) {
+func InitAndStartDCMode() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher := configs.NewWatcher(configFilePath, secretFilePath, watcherOpts...)
+	watcher := configs.NewWatcher(configFilePath, secretFilePath)
 	Secrets = watcher.GetSecret()
 	Params = watcher.GetConfig().Params
 
