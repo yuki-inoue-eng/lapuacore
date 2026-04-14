@@ -1,7 +1,6 @@
 package coinex
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -78,27 +77,27 @@ func (m *GatewayManager) setInsights(insights *coinexInsights) {
 	m.insights = insights
 }
 
-// StartGateway launches all gateway goroutines.
-func StartGateway(ctx context.Context) {
+// StartGateway launches all gateway goroutines using lapua.Ctx.
+func StartGateway() {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
 	}
 
-	go gatewayManager.latencyMeasurer.Start(ctx)
+	go gatewayManager.latencyMeasurer.Start(lapua.Ctx)
 
 	if gatewayManager.privateAPIAgent != nil {
-		gatewayManager.privateAPIAgent.Start(ctx)
+		gatewayManager.privateAPIAgent.Start(lapua.Ctx)
 	}
 
 	if gatewayManager.privateChannel != nil {
 		go func() {
-			if err := gatewayManager.privateChannel.Start(ctx); err != nil {
+			if err := gatewayManager.privateChannel.Start(lapua.Ctx); err != nil {
 				panic(err)
 			}
 		}()
 	}
 
 	if gatewayManager.publicChGroup != nil {
-		go gatewayManager.publicChGroup.Start(ctx)
+		go gatewayManager.publicChGroup.Start(lapua.Ctx)
 	}
 }

@@ -46,11 +46,11 @@ func (i *bybitInsights) GetTrade(symbol *domains.Symbol) insights.Trade {
 }
 
 func (i *bybitInsights) GetQuote(symbol *domains.Symbol) insights.Quote {
-	bt, ok := i.quotes[symbol]
+	q, ok := i.quotes[symbol]
 	if !ok {
 		return nil
 	}
-	return bt
+	return q
 }
 
 func (i *bybitInsights) IsEverythingReady() bool {
@@ -61,8 +61,8 @@ func (i *bybitInsights) IsEverythingReady() bool {
 			}
 		}
 	}
-	for _, bt := range i.quotes {
-		if !bt.IsReady() {
+	for _, q := range i.quotes {
+		if !q.IsReady() {
 			return false
 		}
 	}
@@ -73,7 +73,7 @@ func (i *bybitInsights) IsEverythingReady() bool {
 func InitInsights(
 	tradeSymbols []*domains.Symbol,
 	obDesignators []*OrderBookDesignator,
-	btSymbols []*domains.Symbol,
+	quoteSymbols []*domains.Symbol,
 ) {
 	if gatewayManager == nil {
 		panic("gatewayManager is not initialized")
@@ -116,9 +116,9 @@ func InitInsights(
 	// setup quotes (via orderbook depth=1 adapter)
 	quotes := map[*domains.Symbol]*insights.QuoteImpl{}
 	adapter := translators.NewBookTickerAdapter()
-	for _, symbol := range btSymbols {
-		bt := insights.NewQuote(symbol)
-		quotes[symbol] = bt
+	for _, symbol := range quoteSymbols {
+		quote := insights.NewQuote(symbol)
+		quotes[symbol] = quote
 
 		designator := &OrderBookDesignator{Symbol: symbol, Depth: topics.LinearOBDepth1}
 		obTopic := gatewayManager.getOrderBookTopic(designator)
@@ -128,7 +128,7 @@ func InitInsights(
 				slog.Error("failed to convert orderbook to bookticker", "error", err)
 				return
 			}
-			bt.Update(btData)
+			quote.Update(btData)
 		})
 		linearOBTopics = append(linearOBTopics, obTopic)
 	}
