@@ -229,6 +229,24 @@ func (p *OrderBookImpl) CalculateAsksVolSumMap() *PriceLevelMap {
 	return asksVolSumMap
 }
 
+func (p *OrderBookImpl) GetAsks(depth int) []PriceLevel {
+	var levels []PriceLevel
+	p.AsksMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
+		levels = append(levels, record)
+		return len(levels) < depth
+	})
+	return levels
+}
+
+func (p *OrderBookImpl) GetBids(depth int) []PriceLevel {
+	var levels []PriceLevel
+	p.BidsMap.SortedRange(func(price decimal.Decimal, record PriceLevel) bool {
+		levels = append(levels, record)
+		return len(levels) < depth
+	})
+	return levels
+}
+
 func (p *OrderBookImpl) SetUpdateCallback(callback func()) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

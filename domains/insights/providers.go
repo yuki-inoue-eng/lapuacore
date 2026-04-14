@@ -51,6 +51,10 @@ type OrderBook interface {
 	CalculateBidsVolSumMap() *PriceLevelMap
 	// CalculateAsksVolSumMap returns a PriceLevelMap of cumulative ask volumes.
 	CalculateAsksVolSumMap() *PriceLevelMap
+	// GetAsks returns the top N ask price levels in ascending price order (best first).
+	GetAsks(depth int) []PriceLevel
+	// GetBids returns the top N bid price levels in descending price order (best first).
+	GetBids(depth int) []PriceLevel
 	// SetDeferUpdateCallBack registers a deferred callback invoked on order book updates, separate from the regular update callbacks.
 	SetDeferUpdateCallBack(callback func())
 	// DropDeferUpdateCallBack removes the deferred update callback.
