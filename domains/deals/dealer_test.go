@@ -271,5 +271,64 @@ func TestCancelOrder(t *testing.T) {
 	}
 }
 
+func TestCancelOrder_ReplacesExistingCallbacks(t *testing.T) {
+	t.Run("Sending: duplicate CancelOrder keeps only one callback", func(t *testing.T) {
+		agent := &mockAgent{
+			cancelOrderFunc: func(_ *domains.Symbol, _ *Order, _ CancelOrderRespHandler) error { return nil },
+		}
+		d := newTestDealer(agent)
+		order := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
+		dealerAddLivingOrder(d, order, OrderStatusSending)
+
+		_ = d.CancelOrder(order)
+		_ = d.CancelOrder(order)
+		_ = d.CancelOrder(order)
+
+		assert.Equal(t, 1, len(order.createCallbacks))
+	})
+
+	t.Run("Amending: duplicate CancelOrder keeps only one callback", func(t *testing.T) {
+		agent := &mockAgent{
+			cancelOrderFunc: func(_ *domains.Symbol, _ *Order, _ CancelOrderRespHandler) error { return nil },
+		}
+		d := newTestDealer(agent)
+		order := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
+		dealerAddLivingOrder(d, order, OrderStatusAmending)
+
+		_ = d.CancelOrder(order)
+		_ = d.CancelOrder(order)
+
+		assert.Equal(t, 1, len(order.amendCallbacks))
+	})
+
+	t.Run("Sending: CancelOrder after AmendOrder replaces amend callback with cancel", func(t *testing.T) {
+		amendCalled := false
+		agent := &mockAgent{
+			amendOrderFunc: func(_ *domains.Symbol, _ *Order, _ AmendDetail, _ AmendOrderRespHandler) error {
+				amendCalled = true
+				return nil
+			},
+			cancelOrderFunc: func(_ *domains.Symbol, _ *Order, _ CancelOrderRespHandler) error { return nil },
+		}
+		d := newTestDealer(agent)
+		order := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
+		dealerAddLivingOrder(d, order, OrderStatusSending)
+
+		detail := AmendDetail{Price: decimal.RequireFromString("101"), Qty: decimal.RequireFromString("0.01")}
+		_ = d.AmendOrder(order, detail)
+		assert.Equal(t, 1, len(order.createCallbacks))
+
+		_ = d.CancelOrder(order)
+		assert.Equal(t, 1, len(order.createCallbacks))
+
+		// Verify pending amend detail was cleared
+		_, ok := d.amendingDetailMap.Get(order.GetID())
+		assert.Equal(t, false, ok)
+
+		// Amend agent should never have been called
+		assert.Equal(t, false, amendCalled)
+	})
+}
+
 // ptr is a generic helper to take a pointer to a value.
 func ptr[T any](v T) *T { return &v }

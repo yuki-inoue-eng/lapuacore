@@ -422,6 +422,16 @@ func (o *Order) SetPartiallyFillCallback(callback OrderCallback) {
 	o.partiallyFillCallBacks = append(o.partiallyFillCallBacks, callback)
 }
 
+// ReplaceCreateCallbacks replaces all pending create callbacks with a single callback.
+func (o *Order) ReplaceCreateCallbacks(callback OrderCallback) {
+	o.createCallbacks = []OrderCallback{callback}
+}
+
+// ReplaceAmendCallbacks replaces all pending amend callbacks with a single callback.
+func (o *Order) ReplaceAmendCallbacks(callback OrderCallback) {
+	o.amendCallbacks = []OrderCallback{callback}
+}
+
 func (o *Order) execCreateCallbacks() {
 	for _, cb := range o.createCallbacks {
 		go cb(o)

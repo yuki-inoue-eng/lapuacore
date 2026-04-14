@@ -32,10 +32,10 @@ type DealerImpl struct {
 	posUpdatedHandlers []PositionDataHandler
 }
 
-func (d *DealerImpl) GetSymbol() *domains.Symbol         { return d.Symbol }
-func (d *DealerImpl) GetLivingOrders() *OrdersMutexMap     { return d.LivingOrders }
-func (d *DealerImpl) GetUnrelatedOrders() *OrdersMutexMap  { return d.UnrelatedOrders }
-func (d *DealerImpl) GetCurrentPosition() *Position        { return d.CurrentPosition }
+func (d *DealerImpl) GetSymbol() *domains.Symbol          { return d.Symbol }
+func (d *DealerImpl) GetLivingOrders() *OrdersMutexMap    { return d.LivingOrders }
+func (d *DealerImpl) GetUnrelatedOrders() *OrdersMutexMap { return d.UnrelatedOrders }
+func (d *DealerImpl) GetCurrentPosition() *Position       { return d.CurrentPosition }
 
 // NewDealer returns the DealerImpl for the given symbol, creating it if it does not exist.
 func NewDealer(symbol *domains.Symbol, agent Agent, onError func(err error)) *DealerImpl {
@@ -143,27 +143,33 @@ func (d *DealerImpl) AmendOrder(order *Order, detail AmendDetail) error {
 		}
 	}
 
-	oid := order.GetID()
-	switch order.GetStatus() {
-	default:
-		return DealingErrorOrderNotReadyForOperation
-	case OrderStatusDone:
-		order.execAmendRejectOrderNotExistCallbacks()
-		return nil
-	case OrderStatusPending:
+	var err error
+	var pending bool
+	order.WithOpLock(func() {
+		oid := order.GetID()
+		switch order.GetStatus() {
+		default:
+			err = DealingErrorOrderNotReadyForOperation
+		case OrderStatusDone:
+			order.execAmendRejectOrderNotExistCallbacks()
+		case OrderStatusPending:
+			pending = true
+		case OrderStatusSending:
+			if _, ok := d.amendingDetailMap.Get(oid); !ok {
+				order.SetCreateCallback(cb)
+			}
+			d.amendingDetailMap.Set(oid, detail)
+		case OrderStatusAmending:
+			if _, ok := d.amendingDetailMap.Get(oid); !ok {
+				order.SetAmendCallback(cb)
+			}
+			d.amendingDetailMap.Set(oid, detail)
+		}
+	})
+	if pending {
 		return d.amendOrder(order, detail)
-	case OrderStatusSending:
-		if _, ok := d.amendingDetailMap.Get(oid); !ok {
-			order.SetCreateCallback(cb)
-		}
-		d.amendingDetailMap.Set(oid, detail)
-	case OrderStatusAmending:
-		if _, ok := d.amendingDetailMap.Get(oid); !ok {
-			order.SetAmendCallback(cb)
-		}
-		d.amendingDetailMap.Set(oid, detail)
 	}
-	return nil
+	return err
 }
 
 func (d *DealerImpl) amendOrder(order *Order, detail AmendDetail) error {
@@ -207,23 +213,26 @@ func AmendOrder(dealer Dealer, order *Order, detail AmendDetail) {
 }
 
 // CancelOrder cancels an order. If the order is being sent or amended, the cancel is deferred to the callback.
+// Replaces any previously deferred amend/cancel callbacks so that only one cancel executes.
 func (d *DealerImpl) CancelOrder(order *Order) error {
 	cb := func(o *Order) {
 		if err := d.cancelOrder(o); err != nil {
 			slog.Error("failed to cancel order", err.Error(), d.Symbol.ID())
 		}
 	}
-	switch order.GetStatus() {
-	default:
-	case OrderStatusPending:
-		order.WithOpLock(func() {
+	order.WithOpLock(func() {
+		switch order.GetStatus() {
+		default:
+		case OrderStatusPending:
 			cb(order)
-		})
-	case OrderStatusSending:
-		order.SetCreateCallback(cb)
-	case OrderStatusAmending:
-		order.SetAmendCallback(cb)
-	}
+		case OrderStatusSending:
+			d.amendingDetailMap.Delete(order.GetID())
+			order.ReplaceCreateCallbacks(cb)
+		case OrderStatusAmending:
+			d.amendingDetailMap.Delete(order.GetID())
+			order.ReplaceAmendCallbacks(cb)
+		}
+	})
 	return nil
 }
 
@@ -254,20 +263,19 @@ func (d *DealerImpl) CancelOrders(orders Orders) error {
 	}
 
 	var err error
-	var cancelTargetsInSending []*Order
-	var cancelTargetsInAmending []*Order
 	WithOpeLocks(orders, func() {
 		var cancelTargets []*Order
 		for i := range orders {
 			order := orders[i]
-			if order.GetStatus() == OrderStatusPending {
+			switch order.GetStatus() {
+			case OrderStatusPending:
 				cancelTargets = append(cancelTargets, order)
-			}
-			if order.GetStatus() == OrderStatusSending {
-				cancelTargetsInSending = append(cancelTargetsInSending, order)
-			}
-			if order.GetStatus() == OrderStatusAmending {
-				cancelTargetsInAmending = append(cancelTargetsInAmending, order)
+			case OrderStatusSending:
+				d.amendingDetailMap.Delete(order.GetID())
+				order.ReplaceCreateCallbacks(cb)
+			case OrderStatusAmending:
+				d.amendingDetailMap.Delete(order.GetID())
+				order.ReplaceAmendCallbacks(cb)
 			}
 		}
 		if len(cancelTargets) > 0 {
@@ -279,12 +287,6 @@ func (d *DealerImpl) CancelOrders(orders Orders) error {
 			err = d.agent.CancelOrders(d.Symbol, cancelTargets, d.handleCancelOrdersResp)
 		}
 	})
-	for i := range cancelTargetsInSending {
-		cancelTargetsInSending[i].SetCreateCallback(cb)
-	}
-	for i := range cancelTargetsInAmending {
-		cancelTargetsInAmending[i].SetAmendCallback(cb)
-	}
 
 	if err != nil {
 		d.rejectCancels(orders)
