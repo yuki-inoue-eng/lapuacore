@@ -44,7 +44,7 @@ Limit:   Born → Sending → Pending ⇄ Amending → Done
 
 ### コールバック駆動の非同期処理
 
-REST / WebSocket レスポンスはハンドラコールバックを呼び出す設計です。ドメインコードに明示的な goroutine 管理を持ち込まず、コールバックの dispatch で `go callback(o)` を使用します。Trade データのリアルタイム配信もコールバック登録で実現しています。
+REST / WebSocket レスポンスはハンドラコールバックを呼び出す設計です。ドメインコードに明示的な goroutine 管理を持ち込まず、コールバックの dispatch で `go callback(o)` を使用します。
 
 ### 冗長 WebSocket + 重複排除
 
