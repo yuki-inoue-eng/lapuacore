@@ -1,8 +1,9 @@
 package lapua
 
 import (
-	"errors"
+	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/yuki-inoue-eng/lapuacore/configs"
@@ -11,8 +12,6 @@ import (
 	"github.com/yuki-inoue-eng/lapuacore/initializers/exchanges"
 	"github.com/yuki-inoue-eng/lapuacore/initializers/logger"
 	"github.com/yuki-inoue-eng/lapuacore/metrics"
-
-	"context"
 )
 
 // Public components
@@ -25,30 +24,41 @@ var (
 	Discord  *discord.Client
 )
 
-// File paths set by InitFilePaths.
+// File paths read from environment variables by initFilePaths.
 var (
-	ConfigFilePath string
-	SecretFilePath string
-	LogFilePath    string
+	configFilePath string
+	secretFilePath string
+	logFilePath    string
 )
 
 func IsInitialized() bool {
 	return Ctx != nil && Exporter != nil
 }
 
-// InitFilePaths sets the file paths used by InitAndStart and InitAndStartDCMode.
-func InitFilePaths(configFilePath, secretFilePath, logFilePath string) {
-	ConfigFilePath = configFilePath
-	SecretFilePath = secretFilePath
-	LogFilePath = logFilePath
+// initFilePaths reads file paths from environment variables and validates them.
+func initFilePaths() {
+	configFilePath = os.Getenv("LAPUA_CONFIG_PATH")
+	secretFilePath = os.Getenv("LAPUA_SECRET_PATH")
+	logFilePath = os.Getenv("LAPUA_LOG_PATH")
+
+	if configFilePath == "" {
+		panic("LAPUA_CONFIG_PATH environment variable is not set")
+	}
+	if secretFilePath == "" {
+		panic("LAPUA_SECRET_PATH environment variable is not set")
+	}
+	if logFilePath == "" {
+		panic("LAPUA_LOG_PATH environment variable is not set")
+	}
 }
 
 // InitAndStart initializes and starts all core components using config and secret files.
+// File paths are read from environment variables: LAPUA_CONFIG_PATH, LAPUA_SECRET_PATH, LAPUA_LOG_PATH.
 func InitAndStart(watcherOpts ...configs.Option) {
-	validateFilePaths()
+	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
-	logger.InitLogger(Ctx, LogFilePath)
-	watcher := configs.NewWatcher(ConfigFilePath, SecretFilePath, watcherOpts...)
+	logger.InitLogger(Ctx, logFilePath)
+	watcher := configs.NewWatcher(configFilePath, secretFilePath, watcherOpts...)
 	config := watcher.GetConfig()
 	Secrets = watcher.GetSecret()
 	Params = config.Params
@@ -69,17 +79,18 @@ func InitAndStart(watcherOpts ...configs.Option) {
 
 // InitAndStartDCMode initializes and starts in data curator mode.
 // The bucketName from config params is used as the Discord username.
+// File paths are read from environment variables: LAPUA_CONFIG_PATH, LAPUA_SECRET_PATH, LAPUA_LOG_PATH.
 func InitAndStartDCMode(watcherOpts ...configs.Option) {
-	validateFilePaths()
+	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
-	logger.InitLogger(Ctx, LogFilePath)
-	watcher := configs.NewWatcher(ConfigFilePath, SecretFilePath, watcherOpts...)
+	logger.InitLogger(Ctx, logFilePath)
+	watcher := configs.NewWatcher(configFilePath, secretFilePath, watcherOpts...)
 	Secrets = watcher.GetSecret()
 	Params = watcher.GetConfig().Params
 
 	bucketName := Params.Get("bucketName")
 	if bucketName == "" {
-		panic(errors.New("influx db bucket name must be specified in config file"))
+		panic("influx db bucket name must be specified in config file")
 	}
 	Exporter = metrics.NewExporter(
 		bucketName,
@@ -102,18 +113,6 @@ func InitAndStartNoopMode() {
 	Exporter = metrics.NewExporter("", "", "", "")
 	Discord = discord.NewClient("", "", "", "")
 	go Exporter.Start(Ctx)
-}
-
-func validateFilePaths() {
-	if ConfigFilePath == "" {
-		panic("config file path is not set")
-	}
-	if SecretFilePath == "" {
-		panic("secret file path is not set")
-	}
-	if LogFilePath == "" {
-		panic("log file path is not set")
-	}
 }
 
 // WaitForInsightsToBeReady blocks until all registered Insights report ready.
