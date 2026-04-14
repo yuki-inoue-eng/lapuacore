@@ -71,7 +71,7 @@ func NewTrade(symbol *domains.Symbol) *TradeImpl {
 	}
 }
 
-func (t *TradeImpl) SetUpdateCallback(callback func(TradeDataList)) {
+func (t *TradeImpl) SetUpdateCallback(callback func(msg TradeDataList)) {
 	t.handlers = append(t.handlers, callback)
 }
 
