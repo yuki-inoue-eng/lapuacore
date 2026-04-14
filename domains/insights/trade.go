@@ -61,7 +61,7 @@ func (l TradeDataList) GetArrivedAt() time.Time {
 // TradeImpl manages trade data updates for a symbol.
 type TradeImpl struct {
 	symbol       *domains.Symbol
-	handlers     []TradeDataHandler
+	handlers     []func(msg TradeDataList)
 	lastUpdateAt *time.Time
 }
 
