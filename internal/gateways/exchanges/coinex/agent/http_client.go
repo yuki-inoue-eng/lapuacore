@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -58,14 +57,14 @@ func (c *HttpClient) Start(ctx context.Context) {
 func (c *HttpClient) doPingRequest() {
 	resp, err := c.client.Get("https://" + hostName + pingEndpoint)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to send ping request (%s): %v", hostName, err))
+		slog.Error("failed to send ping request", "error", err, "host", hostName)
 		return
 	}
 	// drain body to allow connection reuse
 	_, err = io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to read ping response body (%s): %v", hostName, err))
+		slog.Error("failed to read ping response body", "error", err, "host", hostName)
 	}
 }
 

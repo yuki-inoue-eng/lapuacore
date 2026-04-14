@@ -275,7 +275,7 @@ func (c *Channel) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			if err := c.conn.Close(); err != nil {
-				slog.Error(fmt.Errorf("failed to close websocket: %v", err).Error())
+				slog.Error("failed to close websocket", "error", err)
 			}
 			wsCancel()
 			c.mu.Lock()
@@ -284,17 +284,17 @@ func (c *Channel) Start(ctx context.Context) error {
 			return nil
 
 		case err := <-c.alertChan:
-			slog.Error(fmt.Errorf("receive health alert (%s): %v", c.exName, err).Error())
+			slog.Error("receive health alert", "error", err, "exchange", c.exName)
 			c.reconnectSigChan <- struct{}{}
 			c.setStatus(ChannelStatusDisconnected)
 
 		case err := <-c.errChan:
-			slog.Error(fmt.Errorf("receive error (%s %s channel): %v", c.exName, c.scopeType.String(), err).Error())
+			slog.Error("receive error", "error", err, "exchange", c.exName, "scope", c.scopeType.String())
 			c.reconnectSigChan <- struct{}{}
 			c.setStatus(ChannelStatusDisconnected)
 
 		case err := <-c.authErrChan:
-			slog.Error(fmt.Errorf("receive auth error (%s %s channel): %v", c.exName, c.scopeType.String(), err).Error())
+			slog.Error("receive auth error", "error", err, "exchange", c.exName, "scope", c.scopeType.String())
 			c.reconnectSigChan <- struct{}{}
 			c.setStatus(ChannelStatusDisconnected)
 
@@ -306,7 +306,7 @@ func (c *Channel) Start(ctx context.Context) error {
 			if err := reconnect(); err != nil {
 				c.setStatus(ChannelStatusDisconnected)
 				c.reconnectCount++
-				slog.Error(fmt.Errorf("failed to reconnect (%s %s channel count: %d): %v", c.exName, c.scopeType.String(), c.reconnectCount, err).Error())
+				slog.Error("failed to reconnect", "error", err, "exchange", c.exName, "scope", c.scopeType.String(), "count", c.reconnectCount)
 				c.reconnectSigChan <- struct{}{}
 			} else {
 				c.setStatus(ChannelStatusConnected)
@@ -317,10 +317,7 @@ func (c *Channel) Start(ctx context.Context) error {
 		case rawMsg := <-c.msgChan:
 			timestamp := time.Now()
 			if err := c.handleTopicMessage(&timestamp, rawMsg); err != nil {
-				slog.Error(
-					fmt.Errorf("failed to handle message: %v", err).Error(),
-					"message", string(rawMsg),
-				)
+				slog.Error("failed to handle message", "error", err, "message", string(rawMsg))
 			}
 		}
 	}

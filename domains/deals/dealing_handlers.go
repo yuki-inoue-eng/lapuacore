@@ -28,7 +28,7 @@ func (d *DealerImpl) handleSendOrdersResp(resps CreateOrdersRespMap, err error) 
 	orders := d.LivingOrders.getSendingOrders(resps.IDs())
 	if err != nil {
 		d.rejectCreates(orders)
-		slog.Error(fmt.Sprintf("send orders resp: %s", err.Error()))
+		slog.Error("send orders resp", "error", err)
 		d.noticeError(err)
 		return
 	}
@@ -48,13 +48,13 @@ func (d *DealerImpl) handleSendOrderResp(resp CreateOrderResp, err error) {
 	order.WithOpLock(func() {
 		if err != nil {
 			d.rejectCreate(order)
-			slog.Error(fmt.Sprintf("send order resp: %s", err.Error()))
+			slog.Error("send order resp", "error", err)
 			d.noticeError(err)
 			return
 		}
 		if err := resp.Err; err != nil {
 			d.rejectCreate(order)
-			slog.Error(fmt.Sprintf("send order error: %s", err.Error()))
+			slog.Error("send order error", "error", err)
 			d.noticeError(err)
 			return
 		}
@@ -78,7 +78,7 @@ func (d *DealerImpl) handleAmendOrdersResp(resps AmendOrdersRespMap, err error) 
 	orders := d.LivingOrders.getAmendingOrders(resps.IDs())
 	if err != nil {
 		d.rejectAmends(orders)
-		slog.Error(fmt.Sprintf("amend orders resp: %s", err.Error()))
+		slog.Error("amend orders resp", "error", err)
 		d.noticeError(err)
 		return
 	}
@@ -100,7 +100,7 @@ func (d *DealerImpl) handleAmendOrderResp(resp AmendOrderResp, err error) {
 				return
 			}
 			d.rejectAmend(order)
-			slog.Error(fmt.Sprintf("amend order resp: %s", err.Error()))
+			slog.Error("amend order resp", "error", err)
 			d.noticeError(err)
 			return
 		}
@@ -110,7 +110,7 @@ func (d *DealerImpl) handleAmendOrderResp(resp AmendOrderResp, err error) {
 				return
 			}
 			d.rejectAmend(order)
-			slog.Error(fmt.Sprintf("amend order resp: %s", err.Error()))
+			slog.Error("amend order resp", "error", err)
 			d.noticeError(err)
 			return
 		}
@@ -122,7 +122,7 @@ func (d *DealerImpl) handleCancelOrdersResp(resps CancelOrdersRespMap, err error
 	orders := d.LivingOrders.getCancelingOrders(resps.IDs())
 	if err != nil {
 		d.rejectCancels(orders)
-		slog.Error(fmt.Sprintf("cancel orders resp: %s", err.Error()))
+		slog.Error("cancel orders resp", "error", err)
 		d.noticeError(err)
 		return
 	}
@@ -146,7 +146,7 @@ func (d *DealerImpl) handleCancelOrderResp(resp CancelOrderResp, err error) {
 				return
 			}
 			d.rejectCancel(order)
-			slog.Error(fmt.Sprintf("cancel order resp: %s", err.Error()))
+			slog.Error("cancel order resp", "error", err)
 			d.noticeError(err)
 			return
 		}
@@ -156,7 +156,7 @@ func (d *DealerImpl) handleCancelOrderResp(resp CancelOrderResp, err error) {
 				return
 			}
 			d.rejectCancel(order)
-			slog.Error(fmt.Sprintf("cancel order resp: %s", err.Error()))
+			slog.Error("cancel order resp", "error", err)
 			d.noticeError(err)
 			return
 		}
@@ -347,8 +347,7 @@ func (d *DealerImpl) rejectCancel(order *Order) {
 func (d *DealerImpl) HandlePositionData(datas []*PositionData) {
 	data, err := d.extractPositionData(datas)
 	if err != nil {
-		slog.Error(err.Error())
-		slog.Info(fmt.Sprintf("invalid position data: %v", datas))
+		slog.Error("invalid position data", "error", err, "data", datas)
 		return
 	}
 

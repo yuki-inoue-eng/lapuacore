@@ -3,7 +3,6 @@ package discord
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 )
@@ -99,6 +98,6 @@ func sendMsg(url, strategyName, msg string) {
 	if err != nil {
 		slog.Error("failed to send discord message", "error", err)
 	} else if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		slog.Error(fmt.Sprintf("failed to send discord message: (http status %d, msg: %s)", resp.StatusCode, msg))
+		slog.Error("failed to send discord message", "status", resp.StatusCode, "message", msg)
 	}
 }

@@ -115,13 +115,13 @@ func (d *DealerImpl) SendOrders(orders []*Order) error {
 
 func SendOrder(dealer Dealer, order *Order) {
 	if err := dealer.SendOrder(order); err != nil {
-		slog.Error("failed to send order", err.Error(), dealer.GetSymbol().ID())
+		slog.Error("failed to send order", "error", err, "symbol", dealer.GetSymbol().ID())
 	}
 }
 
 func SendOrders(dealer Dealer, orders []*Order) {
 	if err := dealer.SendOrders(orders); err != nil {
-		slog.Error("failed to send orders", err.Error(), dealer.GetSymbol().ID())
+		slog.Error("failed to send orders", "error", err, "symbol", dealer.GetSymbol().ID())
 	}
 }
 
@@ -145,7 +145,7 @@ func (d *DealerImpl) AmendOrder(order *Order, detail AmendDetail) error {
 		}
 		d.amendingDetailMap.Delete(oid)
 		if err := d.amendOrder(order, amendDetail); err != nil {
-			slog.Error("failed to amend order", err.Error(), d.Symbol.ID())
+			slog.Error("failed to amend order", "error", err, "symbol", d.Symbol.ID())
 		}
 	}
 
@@ -210,11 +210,11 @@ func (d *DealerImpl) amendOrder(order *Order, detail AmendDetail) error {
 
 func AmendOrder(dealer Dealer, order *Order, detail AmendDetail) {
 	if order == nil {
-		slog.Error("failed to amend order", "order is nil", dealer.GetSymbol().ID())
+		slog.Error("failed to amend order", "reason", "order is nil", "symbol", dealer.GetSymbol().ID())
 		return
 	}
 	if err := dealer.AmendOrder(order, detail); err != nil {
-		slog.Error("failed to amend order:", err.Error(), dealer.GetSymbol().ID())
+		slog.Error("failed to amend order", "error", err, "symbol", dealer.GetSymbol().ID())
 	}
 }
 
@@ -223,7 +223,7 @@ func AmendOrder(dealer Dealer, order *Order, detail AmendDetail) {
 func (d *DealerImpl) CancelOrder(order *Order) error {
 	cb := func(o *Order) {
 		if err := d.cancelOrder(o); err != nil {
-			slog.Error("failed to cancel order", err.Error(), d.Symbol.ID())
+			slog.Error("failed to cancel order", "error", err, "symbol", d.Symbol.ID())
 		}
 	}
 	order.WithOpLock(func() {
@@ -264,7 +264,7 @@ func (d *DealerImpl) CancelOrders(orders Orders) error {
 
 	cb := func(o *Order) {
 		if err := d.cancelOrder(o); err != nil {
-			slog.Error("failed to cancel order", err.Error(), d.Symbol.ID())
+			slog.Error("failed to cancel order", "error", err, "symbol", d.Symbol.ID())
 		}
 	}
 
@@ -305,7 +305,7 @@ func CancelOrder(dealer Dealer, order *Order) {
 		return
 	}
 	if err := dealer.CancelOrder(order); err != nil {
-		slog.Error("failed to cancel order", err.Error(), dealer.GetSymbol().ID())
+		slog.Error("failed to cancel order", "error", err, "symbol", dealer.GetSymbol().ID())
 	}
 }
 
@@ -314,7 +314,7 @@ func CancelOrders(dealer Dealer, orders []*Order) {
 		return
 	}
 	if err := dealer.CancelOrders(orders); err != nil {
-		slog.Error("failed to cancel orders", err.Error(), dealer.GetSymbol().ID())
+		slog.Error("failed to cancel orders", "error", err, "symbol", dealer.GetSymbol().ID())
 	}
 }
 
