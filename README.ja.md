@@ -30,7 +30,7 @@ Born → Sending → Pending ⇄ Amending → Done
                 Canceling ───────────────┘
 ```
 
-Sending / Amending 中に到着した Amend / Cancel リクエストは遅延オペレーションとしてキューイングされ、インフライトオペレーション完了時に自動実行されます。
+Sending / Amending 中に到着した Amend / Cancel は、先行オペレーションの完了を待って自動実行されます。複数回の Amend は最後のリクエストのみ保持し、Cancel は既存の Amend を上書きします。
 
 ### B-Tree 板情報
 
