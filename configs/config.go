@@ -3,6 +3,7 @@ package configs
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"sync"
 	"time"
@@ -17,15 +18,81 @@ type Strategy struct {
 }
 
 // ParamMap provides thread-safe typed access to configuration parameters.
+// When a typed getter (GetInt, GetBool, etc.) fails to parse a value after
+// a hot-reload, ParamMap returns the last successfully parsed value from cache
+// and periodically logs a summary of failing keys.
 type ParamMap struct {
-	mu sync.RWMutex
-	m  map[string]string
+	mu         sync.RWMutex
+	m          map[string]string
+	cache      map[string]any
+	failedKeys map[string]failedParam // key → failure detail
+}
+
+type failedParam struct {
+	rawValue string
+	typeName string
 }
 
 func (p *ParamMap) setParams(m map[string]string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.m = m
+	p.failedKeys = map[string]failedParam{}
+}
+
+// cacheHit records a successful parse and returns the value.
+func cacheHit[T any](p *ParamMap, key string, val T) T {
+	p.cache[key] = val
+	delete(p.failedKeys, key)
+	return val
+}
+
+// cacheFallback returns the cached value for the key if available.
+// If no cached value exists, it returns the zero value of T.
+// It records the failure for periodic logging by the Watcher.
+func cacheFallback[T any](p *ParamMap, key, rawValue, typeName string) T {
+	if _, already := p.failedKeys[key]; !already {
+		slog.Warn("config param parse failed, using cached value", "key", key, "rawValue", rawValue, "expectedType", typeName)
+	}
+	p.failedKeys[key] = failedParam{rawValue: rawValue, typeName: typeName}
+	cached, ok := p.cache[key]
+	if !ok {
+		var zero T
+		return zero
+	}
+	return cached.(T)
+}
+
+// logFailedKeys logs a summary of keys that are currently failing to parse.
+// Called periodically by the Watcher.
+func (p *ParamMap) logFailedKeys() {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if len(p.failedKeys) == 0 {
+		return
+	}
+	slog.Warn(formatFailedKeys(p.failedKeys))
+}
+
+func formatFailedKeys(failedKeys map[string]failedParam) string {
+	maxKeyLen := 0
+	maxRawLen := 0
+	for k, fp := range failedKeys {
+		if l := len(k) + 1; l > maxKeyLen { // +1 for colon
+			maxKeyLen = l
+		}
+		if l := len(fmt.Sprintf("%q", fp.rawValue)); l > maxRawLen {
+			maxRawLen = l
+		}
+	}
+
+	msg := "The following config params failed to parse, using cached values\n"
+	msg += "===== key / raw value / expected type =====\n"
+	for k, fp := range failedKeys {
+		quoted := fmt.Sprintf("%q", fp.rawValue)
+		msg += fmt.Sprintf("%-*s  %-*s  %s\n", maxKeyLen, k+":", maxRawLen, quoted, fp.typeName)
+	}
+	return msg
 }
 
 func (p *ParamMap) Get(key string) string {
@@ -43,73 +110,90 @@ func (p *ParamMap) GetBool(key string) bool {
 	defer p.mu.RUnlock()
 	v, ok := p.m[key]
 	if !ok {
-		panic(fmt.Errorf("param not found: %s", key))
+		return cacheFallback[bool](p, key, "", "bool")
 	}
 	boolValue, err := strconv.ParseBool(v)
 	if err != nil {
-		panic(fmt.Errorf("param is not bool value: %s", key))
+		return cacheFallback[bool](p, key, v, "bool")
 	}
-	return boolValue
+	return cacheHit(p, key, boolValue)
 }
 
 func (p *ParamMap) GetInt(key string) int {
-	n, err := strconv.Atoi(p.Get(key))
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
+	n, err := strconv.Atoi(raw)
 	if err != nil {
-		panic(err)
+		return cacheFallback[int](p, key, raw, "int")
 	}
-	return n
+	return cacheHit(p, key, n)
 }
 
 func (p *ParamMap) GetInt64(key string) int64 {
-	n, err := strconv.ParseInt(p.Get(key), 10, 64)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
+	n, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		panic(err)
+		return cacheFallback[int64](p, key, raw, "int64")
 	}
-	return n
+	return cacheHit(p, key, n)
 }
 
 func (p *ParamMap) GetFloat32(key string) float32 {
-	n, err := strconv.ParseFloat(p.Get(key), 64)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
+	n, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
-		panic(err)
+		return cacheFallback[float32](p, key, raw, "float32")
 	}
-	return float32(n)
+	return cacheHit(p, key, float32(n))
 }
 
 func (p *ParamMap) GetListStr(key string) []string {
-	listStr := p.Get(key)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
 	var l []string
-	if err := json.Unmarshal([]byte(listStr), &l); err != nil {
-		panic(err)
+	if err := json.Unmarshal([]byte(raw), &l); err != nil {
+		return cacheFallback[[]string](p, key, raw, "[]string")
 	}
-	return l
+	return cacheHit(p, key, l)
 }
 
 func (p *ParamMap) GetListInt(key string) []int {
-	listStr := p.Get(key)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
 	var l []int
-	if err := json.Unmarshal([]byte(listStr), &l); err != nil {
-		panic(err)
+	if err := json.Unmarshal([]byte(raw), &l); err != nil {
+		return cacheFallback[[]int](p, key, raw, "[]int")
 	}
-	return l
+	return cacheHit(p, key, l)
 }
 
 func (p *ParamMap) GetListInt64(key string) []int64 {
-	listStr := p.Get(key)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
 	var l []int64
-	if err := json.Unmarshal([]byte(listStr), &l); err != nil {
-		panic(err)
+	if err := json.Unmarshal([]byte(raw), &l); err != nil {
+		return cacheFallback[[]int64](p, key, raw, "[]int64")
 	}
-	return l
+	return cacheHit(p, key, l)
 }
 
 func (p *ParamMap) GetListFloat(key string) []float32 {
-	listStr := p.Get(key)
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
 	var l []float32
-	if err := json.Unmarshal([]byte(listStr), &l); err != nil {
-		panic(err)
+	if err := json.Unmarshal([]byte(raw), &l); err != nil {
+		return cacheFallback[[]float32](p, key, raw, "[]float32")
 	}
-	return l
+	return cacheHit(p, key, l)
 }
 
 func (p *ParamMap) GetListDecimal(key string) []decimal.Decimal {
@@ -130,11 +214,14 @@ func (p *ParamMap) GetFromFloat(key string) decimal.Decimal {
 }
 
 func (p *ParamMap) GetSymbol(key string) *domains.Symbol {
-	symbol := domains.GetSymbol(p.Get(key))
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	raw := p.m[key]
+	symbol := domains.GetSymbol(raw)
 	if symbol == domains.SymbolUnknown {
-		panic(fmt.Sprintf("failed to load symbol: unknown symbol (key: %s)", key))
+		return cacheFallback[*domains.Symbol](p, key, raw, "Symbol")
 	}
-	return symbol
+	return cacheHit(p, key, symbol)
 }
 
 func (p *ParamMap) GetMilliSec(key string) time.Duration {
@@ -161,7 +248,9 @@ func newConfig(raw *RawConfig) *Config {
 			Name: raw.Strategy.Name,
 		},
 		Params: &ParamMap{
-			m: raw.Params,
+			m:          raw.Params,
+			cache:      map[string]any{},
+			failedKeys: map[string]failedParam{},
 		},
 	}
 	return conf
