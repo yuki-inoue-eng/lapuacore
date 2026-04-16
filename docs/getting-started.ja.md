@@ -6,7 +6,7 @@
 go get github.com/yuki-inoue-eng/lapuacore
 ```
 
-Go 1.26 以上が必要です。
+Go 1.21 以上が必要です。
 
 ## 初期化フロー
 

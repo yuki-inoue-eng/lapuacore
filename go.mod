@@ -1,6 +1,6 @@
 module github.com/yuki-inoue-eng/lapuacore
 
-go 1.26.1
+go 1.21
 
 require (
 	github.com/InfluxCommunity/influxdb3-go v0.5.0
