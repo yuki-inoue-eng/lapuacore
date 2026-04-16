@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-04-14
+## [1.1.0] - 2026-04-16
+
+### Changed
+
+- **Minimum Go version**: bumped to Go 1.25.9 (from 1.21)
+- **Panic removal**: all `panic()` calls removed from library code (`gateways/`, `configs/`, `metrics/`) and consolidated into `initializers/`
+- **`initializers/context`**: `NewCancellableContext` now returns `context.CancelCauseFunc` instead of `context.CancelFunc`
+- **`configs/watcher`**: `NewWatcher` takes `context.CancelCauseFunc` as first argument; `Option`/`WithParamValidator` pattern removed
+- **`metrics/exporter`**: `NewExporter` returns `(*Exporter, error)` instead of panicking
+- **`internal/gateways`**: `ChannelGroup.Start()` returns `error` instead of panicking
+
+### Added
+
+- **ParamMap cache fallback**: getter methods (`GetBool`, `GetInt`, etc.) return previously cached values on parse failure instead of panicking, with periodic logging of failed keys
+- **Graceful shutdown on file watch failure**: Watcher calls `CancelCauseFunc` when fsnotify breaks, triggering orderly shutdown
+- **CI enhancements**: coverage profiling, `go vet` lint job, `govulncheck` security scanning (3 parallel jobs)
+
+### Fixed
+
+- Unkeyed struct fields in `examples/book-monitor/main.go`
+
+### Security
+
+- Updated `golang.org/x/net` to v0.53.0 (resolves HTTP/2 vulnerabilities)
+- Updated `hashicorp/go-retryablehttp` to v0.7.8
+
+[1.1.0]: https://github.com/yuki-inoue-eng/lapuacore/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/yuki-inoue-eng/lapuacore/releases/tag/v1.0.0
 
 Initial release.
 
@@ -38,5 +65,3 @@ Initial release.
   - Getting Started guides in English and Japanese
 - **CI**
   - `go test -race ./...` on every push
-
-[1.0.0]: https://github.com/yuki-inoue-eng/lapuacore/releases/tag/v1.0.0
