@@ -6,7 +6,7 @@
 go get github.com/yuki-inoue-eng/lapuacore
 ```
 
-Requires Go 1.26 or later.
+Requires Go 1.23 or later.
 
 ## Initialization Flow
 
