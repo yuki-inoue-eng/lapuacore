@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
+
+const warnInterval = 1 * time.Minute
 
 // Watcher monitors config and secret files for changes using fsnotify.
 type Watcher struct {
@@ -64,12 +67,16 @@ func NewWatcher(cancelCause context.CancelCauseFunc, configFilePath, secretFileP
 // It blocks until the context is cancelled.
 func (w *Watcher) Start(ctx context.Context) {
 	defer w.watcher.Close()
+	ticker := time.NewTicker(warnInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case event := <-w.watcher.Events:
 			w.handleEvent(event)
+		case <-ticker.C:
+			w.config.Params.logFailedKeys()
 		}
 	}
 }
