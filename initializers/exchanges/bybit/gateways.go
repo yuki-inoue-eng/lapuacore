@@ -120,6 +120,10 @@ func StartGateway() {
 	}
 
 	if gatewayManager.publicLinearChGroup != nil {
-		go gatewayManager.publicLinearChGroup.Start(lapua.Ctx)
+		go func() {
+			if err := gatewayManager.publicLinearChGroup.Start(lapua.Ctx); err != nil {
+				panic(err)
+			}
+		}()
 	}
 }

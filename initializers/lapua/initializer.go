@@ -58,16 +58,23 @@ func InitAndStart() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher := configs.NewWatcher(configFilePath, secretFilePath)
+	watcher, err := configs.NewWatcher(configFilePath, secretFilePath)
+	if err != nil {
+		panic(err)
+	}
 	config := watcher.GetConfig()
 	Secrets = watcher.GetSecret()
 	Params = config.Params
-	Exporter = metrics.NewExporter(
+	exporter, err := metrics.NewExporter(
 		config.Strategy.Name,
 		config.Strategy.Name,
 		Secrets.InfluxDB.GetUrl(),
 		Secrets.InfluxDB.GetToken(),
 	)
+	if err != nil {
+		panic(err)
+	}
+	Exporter = exporter
 	Discord = discord.NewClient(config.Strategy.Name,
 		Secrets.Discord.GetInfoUrl(),
 		Secrets.Discord.GetWarnUrl(),
@@ -84,7 +91,10 @@ func InitAndStartDCMode() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher := configs.NewWatcher(configFilePath, secretFilePath)
+	watcher, err := configs.NewWatcher(configFilePath, secretFilePath)
+	if err != nil {
+		panic(err)
+	}
 	Secrets = watcher.GetSecret()
 	Params = watcher.GetConfig().Params
 
@@ -92,12 +102,16 @@ func InitAndStartDCMode() {
 	if bucketName == "" {
 		panic("influx db bucket name must be specified in config file")
 	}
-	Exporter = metrics.NewExporter(
+	exporter, err := metrics.NewExporter(
 		bucketName,
 		"",
 		Secrets.InfluxDB.GetUrl(),
 		Secrets.InfluxDB.GetToken(),
 	)
+	if err != nil {
+		panic(err)
+	}
+	Exporter = exporter
 	Discord = discord.NewClient(bucketName,
 		Secrets.Discord.GetInfoUrl(),
 		Secrets.Discord.GetWarnUrl(),
@@ -110,7 +124,7 @@ func InitAndStartDCMode() {
 // InitAndStartNoopMode starts with noop exporter and noop discord client (for testing).
 func InitAndStartNoopMode() {
 	Ctx, Cancel = initializers.NewCancellableContext()
-	Exporter = metrics.NewExporter("", "", "", "")
+	Exporter, _ = metrics.NewExporter("", "", "", "")
 	Discord = discord.NewClient("", "", "", "")
 	go Exporter.Start(Ctx)
 }
