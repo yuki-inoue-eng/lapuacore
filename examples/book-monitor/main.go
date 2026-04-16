@@ -28,8 +28,8 @@ func (s *strategy) init() {
 	coinex.StartGateway()
 
 	s.display = display.NewBookDisplay(5, []display.BookEntry{
-		{symbolBTC.Name(), coinex.Insights.GetOrderBook(symbolBTC)},
-		{symbolSOL.Name(), coinex.Insights.GetOrderBook(symbolSOL)},
+		{Title: symbolBTC.Name(), OB: coinex.Insights.GetOrderBook(symbolBTC)},
+		{Title: symbolSOL.Name(), OB: coinex.Insights.GetOrderBook(symbolSOL)},
 	})
 
 	lapua.WaitForInsightsToBeReady()
