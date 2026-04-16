@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -32,15 +33,15 @@ type Exporter struct {
 
 // NewExporter initializes a metrics exporter.
 // If url or token is empty, it runs in noop mode (metrics are discarded).
-func NewExporter(bucketName, strategyName, url, token string) *Exporter {
+func NewExporter(bucketName, strategyName, url, token string) (*Exporter, error) {
 	if url == "" || token == "" {
-		return newExporter("", nil, true)
+		return newExporter("", nil, true), nil
 	}
 	client, err := NewInfluxDBClient(url, bucketName, token)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to create InfluxDB client: %w", err)
 	}
-	return newExporter(strategyName, client, false)
+	return newExporter(strategyName, client, false), nil
 }
 
 func newExporter(strategyName string, client *influxdb3.Client, noopMode bool) *Exporter {

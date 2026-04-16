@@ -107,12 +107,13 @@ params:
 			if tt.validator != nil {
 				opts = append(opts, WithParamValidator(tt.validator))
 			}
-			w := NewWatcher(configPath, secretPath, opts...)
+			w, err := NewWatcher(configPath, secretPath, opts...)
+			assert.Equal(t, nil, err)
 
 			assert.Equal(t, "100", w.GetConfig().Params.Get("key1"))
 
 			writeFile(t, configPath, tt.newConfig)
-			err := w.updateConfig()
+			err = w.updateConfig()
 
 			if tt.wantErrContain != "" {
 				assert.NotEqual(t, nil, err)
@@ -174,13 +175,14 @@ discord:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configPath, secretPath := setupWatcherFiles(t)
-			w := NewWatcher(configPath, secretPath)
+			w, err := NewWatcher(configPath, secretPath)
+			assert.Equal(t, nil, err)
 
 			assert.Equal(t, "initial_key", w.GetSecret().CoinEx.GetApiKey())
 			assert.Equal(t, "http://localhost:8086", w.GetSecret().InfluxDB.GetUrl())
 
 			writeFile(t, secretPath, tt.newSecret)
-			err := w.updateSecretFromFile()
+			err = w.updateSecretFromFile()
 			assert.Equal(t, nil, err)
 
 			assert.Equal(t, tt.wantApiKey, w.GetSecret().CoinEx.GetApiKey())
@@ -192,7 +194,8 @@ discord:
 func TestNewWatcher(t *testing.T) {
 	t.Run("initializes config and secret from files", func(t *testing.T) {
 		configPath, secretPath := setupWatcherFiles(t)
-		w := NewWatcher(configPath, secretPath)
+		w, err := NewWatcher(configPath, secretPath)
+		assert.Equal(t, nil, err)
 
 		assert.Equal(t, "test-strategy", w.GetConfig().Strategy.Name)
 		assert.Equal(t, "100", w.GetConfig().Params.Get("key1"))

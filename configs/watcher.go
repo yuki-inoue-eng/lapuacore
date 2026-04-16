@@ -33,28 +33,28 @@ type Watcher struct {
 }
 
 // NewWatcher creates a new Watcher that reads and watches the given config and secret files.
-func NewWatcher(configFilePath, secretFilePath string, opts ...Option) *Watcher {
+func NewWatcher(configFilePath, secretFilePath string, opts ...Option) (*Watcher, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to create fsnotify watcher: %w", err)
 	}
 
 	if err = fsWatcher.Add(configFilePath); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to watch config file: %w", err)
 	}
 
 	if err = fsWatcher.Add(secretFilePath); err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to watch secret file: %w", err)
 	}
 
 	rawConf, err := readRawConfig(configFilePath)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	rawSecret, err := readRawSecret(secretFilePath)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to read secret file: %w", err)
 	}
 
 	w := &Watcher{
@@ -69,7 +69,7 @@ func NewWatcher(configFilePath, secretFilePath string, opts ...Option) *Watcher 
 		opt(w)
 	}
 
-	return w
+	return w, nil
 }
 
 // Start begins watching config and secret files for changes.

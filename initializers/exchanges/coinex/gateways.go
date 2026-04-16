@@ -98,6 +98,10 @@ func StartGateway() {
 	}
 
 	if gatewayManager.publicChGroup != nil {
-		go gatewayManager.publicChGroup.Start(lapua.Ctx)
+		go func() {
+			if err := gatewayManager.publicChGroup.Start(lapua.Ctx); err != nil {
+				panic(err)
+			}
+		}()
 	}
 }

@@ -50,18 +50,25 @@ func (g *ChannelGroup) SetTopics(topics []Topic) {
 }
 
 // Start launches all channels and the cache cleanup goroutine in parallel.
-// Blocks until ctx is cancelled.
-func (g *ChannelGroup) Start(ctx context.Context) {
+// Blocks until ctx is cancelled or a channel returns an error.
+// If a channel fails, the error is returned immediately.
+func (g *ChannelGroup) Start(ctx context.Context) error {
 	go g.cache.StartCleanup(ctx)
 
+	errCh := make(chan error, len(g.channels))
 	for _, ch := range g.channels {
 		ch := ch
 		go func() {
 			if err := ch.Start(ctx); err != nil {
-				panic(err)
+				errCh <- err
 			}
 		}()
 	}
 
-	<-ctx.Done()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }
