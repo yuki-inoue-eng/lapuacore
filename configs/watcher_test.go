@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,15 +46,12 @@ discord:
 
 func TestUpdateConfig(t *testing.T) {
 	tests := []struct {
-		name           string
-		validator      func(map[string]string) error
-		newConfig      string
-		wantKey1       string
-		wantErrContain string
+		name     string
+		newConfig string
+		wantKey1 string
 	}{
 		{
-			name:      "no validator applies update",
-			validator: nil,
+			name: "applies update",
 			newConfig: `
 strategy:
   name: test-strategy
@@ -65,62 +61,21 @@ params:
 `,
 			wantKey1: "200",
 		},
-		{
-			name: "validator passes applies update",
-			validator: func(params map[string]string) error {
-				return nil
-			},
-			newConfig: `
-strategy:
-  name: test-strategy
-params:
-  key1: "300"
-  key2: "updated"
-`,
-			wantKey1: "300",
-		},
-		{
-			name: "validator fails keeps old config",
-			validator: func(params map[string]string) error {
-				if _, ok := params["required_key"]; !ok {
-					return errors.New("required_key is missing")
-				}
-				return nil
-			},
-			newConfig: `
-strategy:
-  name: test-strategy
-params:
-  key1: "999"
-  key2: "bad"
-`,
-			wantKey1:       "100",
-			wantErrContain: "config validation failed",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configPath, secretPath := setupWatcherFiles(t)
 
-			var opts []Option
-			if tt.validator != nil {
-				opts = append(opts, WithParamValidator(tt.validator))
-			}
-			w, err := NewWatcher(configPath, secretPath, opts...)
+			noopCancel := func(error) {}
+			w, err := NewWatcher(noopCancel, configPath, secretPath)
 			assert.Equal(t, nil, err)
 
 			assert.Equal(t, "100", w.GetConfig().Params.Get("key1"))
 
 			writeFile(t, configPath, tt.newConfig)
 			err = w.updateConfig()
-
-			if tt.wantErrContain != "" {
-				assert.NotEqual(t, nil, err)
-				assert.Equal(t, true, containsStr(err.Error(), tt.wantErrContain))
-			} else {
-				assert.Equal(t, nil, err)
-			}
+			assert.Equal(t, nil, err)
 
 			assert.Equal(t, tt.wantKey1, w.GetConfig().Params.Get("key1"))
 		})
@@ -175,7 +130,8 @@ discord:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configPath, secretPath := setupWatcherFiles(t)
-			w, err := NewWatcher(configPath, secretPath)
+			noopCancel := func(error) {}
+			w, err := NewWatcher(noopCancel, configPath, secretPath)
 			assert.Equal(t, nil, err)
 
 			assert.Equal(t, "initial_key", w.GetSecret().CoinEx.GetApiKey())
@@ -194,7 +150,8 @@ discord:
 func TestNewWatcher(t *testing.T) {
 	t.Run("initializes config and secret from files", func(t *testing.T) {
 		configPath, secretPath := setupWatcherFiles(t)
-		w, err := NewWatcher(configPath, secretPath)
+		noopCancel := func(error) {}
+		w, err := NewWatcher(noopCancel, configPath, secretPath)
 		assert.Equal(t, nil, err)
 
 		assert.Equal(t, "test-strategy", w.GetConfig().Strategy.Name)

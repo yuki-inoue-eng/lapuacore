@@ -18,7 +18,7 @@ import (
 // then checks that insights become ready with valid market data.
 func TestCoinExInsightsFlow(t *testing.T) {
 	lapua.InitAndStartNoopMode()
-	defer lapua.Cancel()
+	defer lapua.Cancel(nil)
 
 	symbol := domains.SymbolCoinExFuturesBTCUSDT
 

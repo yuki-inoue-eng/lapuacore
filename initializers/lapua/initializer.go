@@ -17,7 +17,7 @@ import (
 // Public components
 var (
 	Ctx      context.Context
-	Cancel   context.CancelFunc
+	Cancel   context.CancelCauseFunc
 	Params   *configs.ParamMap
 	Secrets  *configs.Secret
 	Exporter *metrics.Exporter
@@ -58,7 +58,7 @@ func InitAndStart() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher, err := configs.NewWatcher(configFilePath, secretFilePath)
+	watcher, err := configs.NewWatcher(Cancel, configFilePath, secretFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -91,7 +91,7 @@ func InitAndStartDCMode() {
 	initFilePaths()
 	Ctx, Cancel = initializers.NewCancellableContext()
 	logger.InitLogger(Ctx, logFilePath)
-	watcher, err := configs.NewWatcher(configFilePath, secretFilePath)
+	watcher, err := configs.NewWatcher(Cancel, configFilePath, secretFilePath)
 	if err != nil {
 		panic(err)
 	}
