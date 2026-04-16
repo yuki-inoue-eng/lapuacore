@@ -11,8 +11,9 @@ import (
 
 // NewCancellableContext returns a context.Context that is cancelled when
 // SIGINT or SIGTERM is received. It forces shutdown after 10 seconds.
-func NewCancellableContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(context.Background())
+// The returned CancelCauseFunc can be used to cancel the context with a reason.
+func NewCancellableContext() (context.Context, context.CancelCauseFunc) {
+	ctx, cancel := context.WithCancelCause(context.Background())
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -20,7 +21,7 @@ func NewCancellableContext() (context.Context, context.CancelFunc) {
 	go func() {
 		sig := <-sigs
 		slog.Info("Received signal: " + sig.String())
-		cancel()
+		cancel(nil)
 
 		select {
 		case <-time.After(10 * time.Second):

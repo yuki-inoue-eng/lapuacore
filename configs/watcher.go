@@ -8,17 +8,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// Option configures a Watcher.
-type Option func(*Watcher)
-
-// WithParamValidator sets a validation function that is called before applying
-// config updates during hot-reload. If the validator returns an error, the old
-// config is kept and the error is logged. This prevents runtime panics from
-// ParamMap getters caused by invalid config values.
-func WithParamValidator(fn func(map[string]string) error) Option {
-	return func(w *Watcher) { w.validateParams = fn }
-}
-
 // Watcher monitors config and secret files for changes using fsnotify.
 type Watcher struct {
 	watcher *fsnotify.Watcher
@@ -26,14 +15,16 @@ type Watcher struct {
 	configFilePath string
 	secretFilePath string
 
-	validateParams func(map[string]string) error
+	cancelCause context.CancelCauseFunc
 
 	config *Config
 	secret *Secret
 }
 
 // NewWatcher creates a new Watcher that reads and watches the given config and secret files.
-func NewWatcher(configFilePath, secretFilePath string, opts ...Option) (*Watcher, error) {
+// cancelCause is called when file watching breaks (e.g. failed to re-watch after rename),
+// triggering a graceful shutdown of the application.
+func NewWatcher(cancelCause context.CancelCauseFunc, configFilePath, secretFilePath string) (*Watcher, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsnotify watcher: %w", err)
@@ -59,14 +50,11 @@ func NewWatcher(configFilePath, secretFilePath string, opts ...Option) (*Watcher
 
 	w := &Watcher{
 		watcher:        fsWatcher,
+		cancelCause:    cancelCause,
 		config:         newConfig(rawConf),
 		secret:         newSecret(rawSecret),
 		configFilePath: configFilePath,
 		secretFilePath: secretFilePath,
-	}
-
-	for _, opt := range opts {
-		opt(w)
 	}
 
 	return w, nil
@@ -89,55 +77,47 @@ func (w *Watcher) Start(ctx context.Context) {
 func (w *Watcher) handleEvent(event fsnotify.Event) {
 	switch event.Name {
 	case w.configFilePath:
-		if err := w.configFileEventHandler(event); err != nil {
-			slog.Error("failed to handle config file event", "error", err)
-			return
-		}
-		slog.Info("config file updated")
+		w.handleConfigEvent(event)
 	case w.secretFilePath:
-		if err := w.secretFileEventHandler(event); err != nil {
-			slog.Error("failed to handle secret file event", "error", err)
-			return
-		}
-		slog.Info("secret file updated")
+		w.handleSecretEvent(event)
 	}
 }
 
-func (w *Watcher) configFileEventHandler(event fsnotify.Event) error {
-	if event.Has(fsnotify.Write) {
-		if err := w.updateConfig(); err != nil {
-			return err
-		}
-	}
+func (w *Watcher) handleConfigEvent(event fsnotify.Event) {
 	// vim replaces the file on save, which triggers a Rename event.
 	// Re-add the file path to continue watching.
 	if event.Has(fsnotify.Rename) {
 		if err := w.resetFilePath(w.configFilePath); err != nil {
-			return err
-		}
-		if err := w.updateConfig(); err != nil {
-			return err
+			slog.Error("failed to re-watch config file, shutting down", "error", err)
+			w.cancelCause(fmt.Errorf("failed to re-watch config file: %w", err))
+			return
 		}
 	}
-	return nil
+	if event.Has(fsnotify.Write) || event.Has(fsnotify.Rename) {
+		if err := w.updateConfig(); err != nil {
+			slog.Warn("failed to update config, keeping old config", "error", err)
+			return
+		}
+		slog.Info("config file updated")
+	}
 }
 
-func (w *Watcher) secretFileEventHandler(event fsnotify.Event) error {
-	if event.Has(fsnotify.Write) {
-		if err := w.updateSecretFromFile(); err != nil {
-			return err
-		}
-	}
+func (w *Watcher) handleSecretEvent(event fsnotify.Event) {
 	// vim replaces the file on save, which triggers a Rename event.
 	if event.Has(fsnotify.Rename) {
 		if err := w.resetFilePath(w.secretFilePath); err != nil {
-			return err
-		}
-		if err := w.updateSecretFromFile(); err != nil {
-			return err
+			slog.Error("failed to re-watch secret file, shutting down", "error", err)
+			w.cancelCause(fmt.Errorf("failed to re-watch secret file: %w", err))
+			return
 		}
 	}
-	return nil
+	if event.Has(fsnotify.Write) || event.Has(fsnotify.Rename) {
+		if err := w.updateSecretFromFile(); err != nil {
+			slog.Warn("failed to update secret, keeping old secret", "error", err)
+			return
+		}
+		slog.Info("secret file updated")
+	}
 }
 
 func (w *Watcher) resetFilePath(filePath string) error {
@@ -151,11 +131,6 @@ func (w *Watcher) updateConfig() error {
 	rawConf, err := readRawConfig(w.configFilePath)
 	if err != nil {
 		return err
-	}
-	if w.validateParams != nil {
-		if err := w.validateParams(rawConf.Params); err != nil {
-			return fmt.Errorf("config validation failed, keeping old config: %w", err)
-		}
 	}
 	w.config.update(rawConf)
 	return nil
