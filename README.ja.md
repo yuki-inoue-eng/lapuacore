@@ -1,5 +1,10 @@
 # lapuacore
 
+[![CI](https://github.com/yuki-inoue-eng/lapuacore/actions/workflows/test.yml/badge.svg)](https://github.com/yuki-inoue-eng/lapuacore/actions/workflows/test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/yuki-inoue-eng/lapuacore.svg)](https://pkg.go.dev/github.com/yuki-inoue-eng/lapuacore)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yuki-inoue-eng/lapuacore)](https://goreportcard.com/report/github.com/yuki-inoue-eng/lapuacore)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 取引所非依存の低レイテンシ取引システム基盤ライブラリ (Go)
 
 [English](README.md)
@@ -12,9 +17,6 @@
 ![CoinEx Futures Market Maker LV5 — 月間約 $10M の取引量](docs/images/coinex-market-maker-lv5.png)
 
 lapuacore では ドメインモデル、ゲートウェイ抽象化、並行処理プリミティブを備え、CoinEx と Bybit の2取引所アダプタを実装しています。
-
-
-> **Note:** このプロジェクトは設計リファレンスです。OSS ライブラリとしてのメンテナンスは対象外です。
 
 ## Design Highlights
 
@@ -159,6 +161,10 @@ Strategy Layer (user-provided)
 
 - [Getting Started](docs/getting-started.md)
 - [Getting Started (日本語)](docs/getting-started.ja.md)
+
+## Project Status
+
+本プロジェクトは設計リファレンスとして公開しています。著者による継続的なメンテナンス、機能追加、Issue・Pull Request への対応は行っていません。本番利用の際は fork してご利用ください。
 
 ## License
 
