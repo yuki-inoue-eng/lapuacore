@@ -67,6 +67,30 @@ Callbacks can be registered for market data and order lifecycle events. The stra
 
 lapuacore manages N redundant WebSocket connections via ChannelGroup, subscribing to the same topics in parallel. A TTL cache eliminates duplicate messages, processing only the first data to arrive. This prevents market data gaps from single connection drops and reduces average message delivery time.
 
+### Other Design Decisions
+
+**Exchange Connectivity**
+
+- **Rate limit management**: Rate limiters are implemented per quota group (Order, Cancel, etc.) based on each exchange's official documentation. Quota is checked before dispatch, proactively avoiding 429 errors.
+- **Persistent TLS connections**: TLS connections to exchange REST APIs are kept alive, eliminating per-order TLS handshake overhead.
+- **WebSocket health checks**: Each WebSocket connection runs a 3-second ping/pong liveness check with automatic reconnection on timeout. Each leg of the redundant WebSocket group operates independently.
+
+**Concurrency Control**
+
+- **Two-tier order locking**: `Order` holds a state-protecting RWMutex (`mu`) and an operation-exclusive Mutex (`muOpe`). State reads are never blocked by in-flight operations.
+- **Atomic multi-order locking**: `WithOpeLocks(orders, f)` acquires operation locks on multiple orders at once, preventing races such as an individual Amend interleaving with a batch Cancel.
+- **Generic thread-safe primitives**: `mutex.Flag` / `mutex.Map` / `mutex.Slice` are provided as generics, offering type-safe operations, max-length enforcement, and concurrent iteration — capabilities absent from the standard `sync.Map`.
+
+**Order Management**
+
+- **Immediate tracking via internal ID**: Orders maintain both an internally generated ID (xid) and the exchange-assigned Public ID. This allows tracking by internal ID before the Public ID is confirmed, decoupling callback binding from exchange response timing.
+- **Unrelated order tracking**: Orders from manual trading or other bots are tracked as `UnrelatedOrders`, separated from strategy-managed orders. This cleanly isolates position calculations and cancel targets when sharing an account across multiple strategies or manual operations.
+
+**Configuration**
+
+- **Config hot reload**: File changes are detected via fsnotify, allowing parameter updates without application restart.
+- **Fail-safe**: On config parse failure, the last cached value is returned and operation continues, with failed keys reported via periodic logging. If the fsnotify watcher itself breaks, the application is gracefully shut down via `CancelCauseFunc`, eliminating the risk of running with stale configuration.
+
 ## Architecture
 
 ```
