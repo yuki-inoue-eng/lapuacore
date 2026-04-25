@@ -3,8 +3,6 @@ package agent
 import (
 	"testing"
 	"time"
-
-	"github.com/bmizerany/assert"
 )
 
 func TestRateLimiter_Consume(t *testing.T) {
@@ -27,9 +25,13 @@ func TestRateLimiter_Consume(t *testing.T) {
 			l := newRateLimiter()
 			err := l.consume(tt.group, tt.n)
 			if tt.wantErr {
-				assert.NotEqual(t, nil, err)
+				if err == nil {
+					t.Errorf("expected error but got nil")
+				}
 			} else {
-				assert.Equal(t, nil, err)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
 		})
 	}
@@ -38,43 +40,61 @@ func TestRateLimiter_Consume(t *testing.T) {
 func TestRateLimiter_QuotaDecreases(t *testing.T) {
 	l := newRateLimiter()
 
-	assert.Equal(t, nil, l.consume(GroupOrder, 5))
+	if err := l.consume(GroupOrder, 5); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	got := l.quotas[GroupOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitOrder-5, got)
+	if got != limitOrder-5 {
+		t.Errorf("got %v, want %v", got, limitOrder-5)
+	}
 }
 
 func TestRateLimiter_GroupIndependence(t *testing.T) {
 	l := newRateLimiter()
 
 	// Exhaust order quota
-	assert.Equal(t, nil, l.consume(GroupOrder, limitOrder))
+	if err := l.consume(GroupOrder, limitOrder); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// Cancel quota should be unaffected
-	assert.Equal(t, nil, l.consume(GroupCancel, 1))
+	if err := l.consume(GroupCancel, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	cancelQuota := l.quotas[GroupCancel]
 	l.mu.Unlock()
-	assert.Equal(t, limitCancel-1, cancelQuota)
+	if got, want := cancelQuota, limitCancel-1; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestRateLimiter_QuotaRecovery(t *testing.T) {
 	l := newRateLimiter()
 
-	assert.Equal(t, nil, l.consume(GroupOrder, limitOrder))
+	if err := l.consume(GroupOrder, limitOrder); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// Should fail immediately
 	err := l.consume(GroupOrder, 1)
-	assert.NotEqual(t, nil, err)
+	if err == nil {
+		t.Errorf("expected error but got nil")
+	}
 
 	// Wait for recovery
 	time.Sleep(1100 * time.Millisecond)
 
 	// Should succeed after recovery
-	assert.Equal(t, nil, l.consume(GroupOrder, 1))
+	if err := l.consume(GroupOrder, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	got := l.quotas[GroupOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitOrder-1, got)
+	if got != limitOrder-1 {
+		t.Errorf("got %v, want %v", got, limitOrder-1)
+	}
 }

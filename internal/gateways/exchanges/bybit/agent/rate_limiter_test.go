@@ -3,8 +3,6 @@ package agent
 import (
 	"testing"
 	"time"
-
-	"github.com/bmizerany/assert"
 )
 
 func TestRateLimiter_Consume(t *testing.T) {
@@ -30,9 +28,13 @@ func TestRateLimiter_Consume(t *testing.T) {
 			l := newRateLimiter()
 			err := l.consume(tt.group, tt.n)
 			if tt.wantErr {
-				assert.NotEqual(t, nil, err)
+				if err == nil {
+					t.Errorf("expected error but got nil")
+				}
 			} else {
-				assert.Equal(t, nil, err)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
 		})
 	}
@@ -41,49 +43,71 @@ func TestRateLimiter_Consume(t *testing.T) {
 func TestRateLimiter_QuotaDecreases(t *testing.T) {
 	l := newRateLimiter()
 
-	assert.Equal(t, nil, l.consume(GroupCreateOrder, 5))
+	if err := l.consume(GroupCreateOrder, 5); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	got := l.quotas[GroupCreateOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitCreateOrder-5, got)
+	if got != limitCreateOrder-5 {
+		t.Errorf("got %v, want %v", got, limitCreateOrder-5)
+	}
 }
 
 func TestRateLimiter_GroupIndependence(t *testing.T) {
 	l := newRateLimiter()
 
 	// Exhaust create quota
-	assert.Equal(t, nil, l.consume(GroupCreateOrder, limitCreateOrder))
+	if err := l.consume(GroupCreateOrder, limitCreateOrder); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// Cancel and amend quotas should be unaffected
-	assert.Equal(t, nil, l.consume(GroupCancelOrder, 1))
+	if err := l.consume(GroupCancelOrder, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	cancelQuota := l.quotas[GroupCancelOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitCancelOrder-1, cancelQuota)
+	if got, want := cancelQuota, limitCancelOrder-1; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 
-	assert.Equal(t, nil, l.consume(GroupAmendOrder, 1))
+	if err := l.consume(GroupAmendOrder, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	amendQuota := l.quotas[GroupAmendOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitAmendOrder-1, amendQuota)
+	if got, want := amendQuota, limitAmendOrder-1; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestRateLimiter_QuotaRecovery(t *testing.T) {
 	l := newRateLimiter()
 
-	assert.Equal(t, nil, l.consume(GroupCreateOrder, limitCreateOrder))
+	if err := l.consume(GroupCreateOrder, limitCreateOrder); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// Should fail immediately
 	err := l.consume(GroupCreateOrder, 1)
-	assert.NotEqual(t, nil, err)
+	if err == nil {
+		t.Errorf("expected error but got nil")
+	}
 
 	// Wait for recovery
 	time.Sleep(1100 * time.Millisecond)
 
 	// Should succeed after recovery
-	assert.Equal(t, nil, l.consume(GroupCreateOrder, 1))
+	if err := l.consume(GroupCreateOrder, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	l.mu.Lock()
 	got := l.quotas[GroupCreateOrder]
 	l.mu.Unlock()
-	assert.Equal(t, limitCreateOrder-1, got)
+	if got != limitCreateOrder-1 {
+		t.Errorf("got %v, want %v", got, limitCreateOrder-1)
+	}
 }

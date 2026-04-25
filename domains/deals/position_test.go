@@ -3,7 +3,6 @@ package deals
 import (
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -33,7 +32,9 @@ func TestPosSide(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, PosSide(decimal.RequireFromString(tt.pos)))
+			if got, want := PosSide(decimal.RequireFromString(tt.pos)), tt.want; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -71,8 +72,12 @@ func TestPosition_GetQty(t *testing.T) {
 			p.value = decimal.RequireFromString(tt.value)
 
 			side, qty := p.GetQty()
-			assert.Equal(t, tt.wantSide, side)
-			assert.Equal(t, true, qty.Equal(decimal.RequireFromString(tt.wantQty)))
+			if got, want := side, tt.wantSide; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if !qty.Equal(decimal.RequireFromString(tt.wantQty)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }

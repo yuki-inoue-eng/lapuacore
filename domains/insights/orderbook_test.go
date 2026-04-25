@@ -2,9 +2,9 @@ package insights
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -94,7 +94,9 @@ func TestOrderBook_RoundToTickSize(t *testing.T) {
 			got := book.RoundToTickSize(orderBookMustDecimal(t, tt.price))
 			want := orderBookMustDecimal(t, tt.want)
 
-			assert.Equal(t, true, got.Equal(want))
+			if !got.Equal(want) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -126,8 +128,12 @@ func TestOrderBook_CalcBestPrice(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotAsk, gotBid := book.CalcBestPrice(orderBookMustDecimal(t, tt.midPrice))
 
-			assert.Equal(t, true, gotAsk.Equal(orderBookMustDecimal(t, tt.wantBestAsk)))
-			assert.Equal(t, true, gotBid.Equal(orderBookMustDecimal(t, tt.wantBestBid)))
+			if !gotAsk.Equal(orderBookMustDecimal(t, tt.wantBestAsk)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !gotBid.Equal(orderBookMustDecimal(t, tt.wantBestBid)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -176,7 +182,9 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 
 			got := book.AvgExecPrice(tt.bookSide, orderBookMustDecimal(t, tt.qty))
 
-			assert.Equal(t, true, got.Equal(orderBookMustDecimal(t, tt.want)))
+			if !got.Equal(orderBookMustDecimal(t, tt.want)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -225,7 +233,9 @@ func TestOrderBook_AvgExecPriceBySide(t *testing.T) {
 
 			got := book.AvgExecPriceBySide(tt.side, orderBookMustDecimal(t, tt.qty))
 
-			assert.Equal(t, true, got.Equal(orderBookMustDecimal(t, tt.want)))
+			if !got.Equal(orderBookMustDecimal(t, tt.want)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -258,7 +268,9 @@ func TestOrderBook_CalculateBidsVolSumMap(t *testing.T) {
 
 			got := orderBookCollectLevels(book.CalculateBidsVolSumMap())
 
-			assert.Equal(t, tt.want, got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -291,7 +303,9 @@ func TestOrderBook_CalculateAsksVolSumMap(t *testing.T) {
 
 			got := orderBookCollectLevels(book.CalculateAsksVolSumMap())
 
-			assert.Equal(t, tt.want, got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -299,6 +313,10 @@ func TestOrderBook_CalculateAsksVolSumMap(t *testing.T) {
 func TestOrderBook_Getters(t *testing.T) {
 	book := NewOrderBook(domains.SymbolCoinExFuturesBTCUSDT)
 
-	assert.Equal(t, true, book.GetTickSize().Equal(orderBookMustDecimal(t, "0.01")))
-	assert.Equal(t, true, book.GetMinOrderQty().Equal(orderBookMustDecimal(t, "0.0001")))
+	if !book.GetTickSize().Equal(orderBookMustDecimal(t, "0.01")) {
+		t.Errorf("got %v, want true", false)
+	}
+	if !book.GetMinOrderQty().Equal(orderBookMustDecimal(t, "0.0001")) {
+		t.Errorf("got %v, want true", false)
+	}
 }

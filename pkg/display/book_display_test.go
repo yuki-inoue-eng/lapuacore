@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/domains/insights"
@@ -45,7 +44,9 @@ func TestVisibleLen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, visibleLen(tt.s))
+			if got, want := visibleLen(tt.s), tt.want; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -57,9 +58,15 @@ func TestBuildBookLines_WaitingForData(t *testing.T) {
 	d := NewBookDisplay(3, []BookEntry{{Title: "BTC/USDT", OB: ob}})
 	lines, width := d.buildBookLines("BTC/USDT", ob)
 
-	assert.Equal(t, 1, len(lines))
-	assert.Equal(t, "BTC/USDT: waiting for data...", lines[0])
-	assert.Equal(t, len("BTC/USDT: waiting for data..."), width)
+	if got, want := len(lines), 1; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := lines[0], "BTC/USDT: waiting for data..."; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := width, len("BTC/USDT: waiting for data..."); got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestBuildBookLines_Structure(t *testing.T) {
@@ -79,25 +86,43 @@ func TestBuildBookLines_Structure(t *testing.T) {
 
 	// Structure: header, 3 asks (reversed), spread, 2 bids, empty line
 	// Total: 1 + 3 + 1 + 2 + 1 = 8
-	assert.Equal(t, 8, len(lines))
+	if got, want := len(lines), 8; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 
 	// Header contains title
-	assert.T(t, visibleLen(lines[0]) > 0, "header should not be empty")
+	if !(visibleLen(lines[0]) > 0) {
+		t.Error("header should not be empty")
+	}
 
 	// Asks are in reverse order (highest first)
-	assert.T(t, containsVisible(lines[1], "Ask 102.00"))
-	assert.T(t, containsVisible(lines[2], "Ask 101.00"))
-	assert.T(t, containsVisible(lines[3], "Ask 100.00"))
+	if !containsVisible(lines[1], "Ask 102.00") {
+		t.Error("expected true")
+	}
+	if !containsVisible(lines[2], "Ask 101.00") {
+		t.Error("expected true")
+	}
+	if !containsVisible(lines[3], "Ask 100.00") {
+		t.Error("expected true")
+	}
 
 	// Spread line
-	assert.T(t, containsVisible(lines[4], "spread(1.00)"))
+	if !containsVisible(lines[4], "spread(1.00)") {
+		t.Error("expected true")
+	}
 
 	// Bids in best-first order
-	assert.T(t, containsVisible(lines[5], "Bid 99.00"))
-	assert.T(t, containsVisible(lines[6], "Bid 98.00"))
+	if !containsVisible(lines[5], "Bid 99.00") {
+		t.Error("expected true")
+	}
+	if !containsVisible(lines[6], "Bid 98.00") {
+		t.Error("expected true")
+	}
 
 	// Last line is empty
-	assert.Equal(t, "", lines[7])
+	if got, want := lines[7], ""; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestBuildBookLines_WidthConsistency(t *testing.T) {
@@ -116,11 +141,15 @@ func TestBuildBookLines_WidthConsistency(t *testing.T) {
 	lines, maxWidth := d.buildBookLines("BTC/USDT", ob)
 
 	// Header and spread should match data width
-	assert.Equal(t, maxWidth, visibleLen(lines[0]))
+	if got, want := visibleLen(lines[0]), maxWidth; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 
 	// Find spread line (after asks)
 	spreadIdx := 1 + len(asks) // header + asks
-	assert.Equal(t, maxWidth, visibleLen(lines[spreadIdx]))
+	if got, want := visibleLen(lines[spreadIdx]), maxWidth; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestNewBookDisplay_Books(t *testing.T) {
@@ -133,9 +162,15 @@ func TestNewBookDisplay_Books(t *testing.T) {
 	}
 	d := NewBookDisplay(5, entries)
 
-	assert.Equal(t, 2, len(d.Books()))
-	assert.Equal(t, "BTC/USDT", d.Books()[0].Title)
-	assert.Equal(t, "SOL/USDT", d.Books()[1].Title)
+	if got, want := len(d.Books()), 2; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := d.Books()[0].Title, "BTC/USDT"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := d.Books()[1].Title, "SOL/USDT"; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 // containsVisible strips ANSI codes and checks if the substring is present.

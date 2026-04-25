@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -86,14 +85,22 @@ func TestHandleSendOrderResp(t *testing.T) {
 			resp := CreateOrderResp{OrderID: order.GetID(), PublicID: publicID, Err: tt.orderErr, ArrivedAt: handlersNow(), ConfirmedAt: handlersNow()}
 			d.handleSendOrderResp(resp, tt.requestErr)
 
-			assert.Equal(t, tt.wantStatus, order.GetStatus())
+			if got, want := order.GetStatus(), tt.wantStatus; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 			if tt.wantDoneReason != nil {
-				assert.Equal(t, *tt.wantDoneReason, *order.GetOrderDoneReason())
+				if got, want := *order.GetOrderDoneReason(), *tt.wantDoneReason; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantPublicID != "" {
-				assert.Equal(t, tt.wantPublicID, order.GetPublicID())
+				if got, want := order.GetPublicID(), tt.wantPublicID; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
-			assert.Equal(t, tt.wantInLiving, d.LivingOrders.getOrder(order.GetID()) != nil)
+			if got, want := d.LivingOrders.getOrder(order.GetID()) != nil, tt.wantInLiving; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 
@@ -152,12 +159,20 @@ func TestHandleCancelOrderResp(t *testing.T) {
 
 			d.handleCancelOrderResp(CancelOrderResp{OrderID: order.GetID(), Err: tt.orderErr}, tt.requestErr)
 
-			assert.Equal(t, tt.wantStatus, order.GetStatus())
-			if tt.wantDoneReason != nil {
-				assert.Equal(t, *tt.wantDoneReason, *order.GetOrderDoneReason())
+			if got, want := order.GetStatus(), tt.wantStatus; got != want {
+				t.Errorf("got %v, want %v", got, want)
 			}
-			assert.Equal(t, tt.wantInLiving, d.LivingOrders.getOrder(order.GetID()) != nil)
-			assert.Equal(t, tt.wantDoneCount, d.doneOrders.Len())
+			if tt.wantDoneReason != nil {
+				if got, want := *order.GetOrderDoneReason(), *tt.wantDoneReason; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+			}
+			if got, want := d.LivingOrders.getOrder(order.GetID()) != nil, tt.wantInLiving; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := d.doneOrders.Len(), tt.wantDoneCount; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -211,12 +226,18 @@ func TestHandleAmendOrderResp(t *testing.T) {
 			}
 			d.handleAmendOrderResp(resp, tt.requestErr)
 
-			assert.Equal(t, tt.wantStatus, order.GetStatus())
+			if got, want := order.GetStatus(), tt.wantStatus; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 			if tt.wantDoneReason != nil {
-				assert.Equal(t, *tt.wantDoneReason, *order.GetOrderDoneReason())
+				if got, want := *order.GetOrderDoneReason(), *tt.wantDoneReason; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantPrice != "" {
-				assert.Equal(t, true, order.GetPrice().Equal(decimal.RequireFromString(tt.wantPrice)))
+				if !order.GetPrice().Equal(decimal.RequireFromString(tt.wantPrice)) {
+					t.Errorf("got %v, want true", false)
+				}
 			}
 		})
 	}
@@ -240,10 +261,18 @@ func TestHandleOrderData(t *testing.T) {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}}
 			},
 			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
-				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
-				assert.Equal(t, OrderDoneReasonFilled, *orders[0].GetOrderDoneReason())
-				assert.Equal(t, true, d.LivingOrders.getOrder(orders[0].GetID()) == nil)
-				assert.Equal(t, 1, d.doneOrders.Len())
+				if got, want := orders[0].GetStatus(), OrderStatusDone; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := *orders[0].GetOrderDoneReason(), OrderDoneReasonFilled; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if d.LivingOrders.getOrder(orders[0].GetID()) != nil {
+					t.Errorf("got non-nil, want nil")
+				}
+				if got, want := d.doneOrders.Len(), 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			},
 		},
 		{
@@ -281,9 +310,15 @@ func TestHandleOrderData(t *testing.T) {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusPartiallyFilled, CumExecQty: decimal.RequireFromString("0.005"), ArrivedAt: handlersNow()}}
 			},
 			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
-				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
-				assert.Equal(t, OrderDoneReasonPartiallyFilledAndCanceled, *orders[0].GetOrderDoneReason())
-				assert.Equal(t, 1, d.doneOrders.Len())
+				if got, want := orders[0].GetStatus(), OrderStatusDone; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := *orders[0].GetOrderDoneReason(), OrderDoneReasonPartiallyFilledAndCanceled; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := d.doneOrders.Len(), 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			},
 		},
 		{
@@ -297,12 +332,16 @@ func TestHandleOrderData(t *testing.T) {
 				return []*OrderData{{ID: orders[0].GetID(), Status: OrderDataStatusPartiallyFilled, CumExecQty: decimal.RequireFromString("0.005"), ArrivedAt: handlersNow()}}
 			},
 			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
-				assert.Equal(t, OrderStatusPending, orders[0].GetStatus())
-				assert.Equal(t, 0, d.doneOrders.Len())
+				if got, want := orders[0].GetStatus(), OrderStatusPending; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := d.doneOrders.Len(), 0; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			},
 		},
 		{
-			// Regression test for the return→continue bug fix.
+			// Regression test for the return->continue bug fix.
 			name: "two Filled events in one batch: both are processed",
 			setup: func(d *DealerImpl) []*Order {
 				o1 := dealerMakeLimitOrder("100", "0.01", domains.SideBuy)
@@ -318,9 +357,15 @@ func TestHandleOrderData(t *testing.T) {
 				}
 			},
 			check: func(t *testing.T, d *DealerImpl, orders []*Order) {
-				assert.Equal(t, OrderStatusDone, orders[0].GetStatus())
-				assert.Equal(t, OrderStatusDone, orders[1].GetStatus())
-				assert.Equal(t, 2, d.doneOrders.Len())
+				if got, want := orders[0].GetStatus(), OrderStatusDone; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := orders[1].GetStatus(), OrderStatusDone; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := d.doneOrders.Len(), 2; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			},
 		},
 		{
@@ -332,7 +377,9 @@ func TestHandleOrderData(t *testing.T) {
 				return []*OrderData{{ID: "", PublicID: "ext-001", Status: OrderDataStatusOpened, ArrivedAt: handlersNow(), ConfirmedAt: handlersNow()}}
 			},
 			check: func(t *testing.T, d *DealerImpl, _ []*Order) {
-				assert.NotEqual(t, nil, d.UnrelatedOrders.getOrder("ext-001"))
+				if d.UnrelatedOrders.getOrder("ext-001") == nil {
+					t.Errorf("got nil, want non-nil")
+				}
 			},
 		},
 		{
@@ -346,8 +393,12 @@ func TestHandleOrderData(t *testing.T) {
 				return []*OrderData{{ID: "", PublicID: "ext-001", Status: OrderDataStatusFilled, ArrivedAt: handlersNow()}}
 			},
 			check: func(t *testing.T, d *DealerImpl, _ []*Order) {
-				assert.Equal(t, true, d.UnrelatedOrders.getOrder("ext-001") == nil)
-				assert.Equal(t, 1, d.doneOrders.Len())
+				if d.UnrelatedOrders.getOrder("ext-001") != nil {
+					t.Errorf("got non-nil, want nil")
+				}
+				if got, want := d.doneOrders.Len(), 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			},
 		},
 	}

@@ -2,10 +2,10 @@ package insights
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -140,8 +140,12 @@ func TestOrderBook_updateByDelta(t *testing.T) {
 			gotAsks := orderBookHandlerCollectLevels(book.AsksMap)
 			gotBids := orderBookHandlerCollectLevels(book.BidsMap)
 
-			assert.Equal(t, tt.wantAsks, gotAsks)
-			assert.Equal(t, tt.wantBids, gotBids)
+			if !reflect.DeepEqual(gotAsks, tt.wantAsks) {
+				t.Errorf("got %v, want %v", gotAsks, tt.wantAsks)
+			}
+			if !reflect.DeepEqual(gotBids, tt.wantBids) {
+				t.Errorf("got %v, want %v", gotBids, tt.wantBids)
+			}
 		})
 	}
 }
@@ -218,8 +222,12 @@ func TestOrderBook_resetBySnapshot(t *testing.T) {
 			gotAsks := orderBookHandlerCollectLevels(book.AsksMap)
 			gotBids := orderBookHandlerCollectLevels(book.BidsMap)
 
-			assert.Equal(t, tt.wantAsks, gotAsks)
-			assert.Equal(t, tt.wantBids, gotBids)
+			if !reflect.DeepEqual(gotAsks, tt.wantAsks) {
+				t.Errorf("got %v, want %v", gotAsks, tt.wantAsks)
+			}
+			if !reflect.DeepEqual(gotBids, tt.wantBids) {
+				t.Errorf("got %v, want %v", gotBids, tt.wantBids)
+			}
 		})
 	}
 }
@@ -333,31 +341,57 @@ func TestOrderBook_UpdateByOBData(t *testing.T) {
 				book.UpdateByOBData(update)
 			}
 
-			assert.Equal(t, tt.wantReady, book.IsReady())
-			assert.Equal(t, tt.wantUpdateCallCount, updateCallCount)
-			assert.Equal(t, tt.wantDeferCallCount, deferCallCount)
+			if got, want := book.IsReady(), tt.wantReady; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := updateCallCount, tt.wantUpdateCallCount; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := deferCallCount, tt.wantDeferCallCount; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
-			assert.Equal(t, tt.wantBestAsk, orderBookHandlerFormatRecord(book.GetBestAsk()))
-			assert.Equal(t, tt.wantBestBid, orderBookHandlerFormatRecord(book.GetBestBid()))
-			assert.Equal(t, tt.wantBeforeBestAsk, orderBookHandlerFormatRecord(book.beforeBestAsk))
-			assert.Equal(t, tt.wantBeforeBestBid, orderBookHandlerFormatRecord(book.beforeBestBid))
+			if got, want := orderBookHandlerFormatRecord(book.GetBestAsk()), tt.wantBestAsk; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := orderBookHandlerFormatRecord(book.GetBestBid()), tt.wantBestBid; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := orderBookHandlerFormatRecord(book.beforeBestAsk), tt.wantBeforeBestAsk; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := orderBookHandlerFormatRecord(book.beforeBestBid), tt.wantBeforeBestBid; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
 			if tt.wantDiffBestAsk != "" {
 				diffAsk := book.GetDiffBestAsk()
-				assert.Equal(t, tt.wantDiffBestAsk, fmt.Sprintf("%s:%s:%d", diffAsk.Price.String(), diffAsk.Volume.String(), diffAsk.SeqID))
+				if got, want := fmt.Sprintf("%s:%s:%d", diffAsk.Price.String(), diffAsk.Volume.String(), diffAsk.SeqID), tt.wantDiffBestAsk; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantDiffBestBid != "" {
 				diffBid := book.GetDiffBestBid()
-				assert.Equal(t, tt.wantDiffBestBid, fmt.Sprintf("%s:%s:%d", diffBid.Price.String(), diffBid.Volume.String(), diffBid.SeqID))
+				if got, want := fmt.Sprintf("%s:%s:%d", diffBid.Price.String(), diffBid.Volume.String(), diffBid.SeqID), tt.wantDiffBestBid; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 
 			gotLastExecAt := book.GetLastExecAt()
 			gotLastArrivedAt := book.GetLastArrivedAt()
 
-			assert.Equal(t, true, gotLastExecAt != nil)
-			assert.Equal(t, true, gotLastArrivedAt != nil)
-			assert.Equal(t, true, gotLastExecAt.Equal(tt.wantLastExecAt))
-			assert.Equal(t, true, gotLastArrivedAt.Equal(tt.wantLastArrivedAt))
+			if gotLastExecAt == nil {
+				t.Errorf("got nil, want non-nil")
+			}
+			if gotLastArrivedAt == nil {
+				t.Errorf("got nil, want non-nil")
+			}
+			if !gotLastExecAt.Equal(tt.wantLastExecAt) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !gotLastArrivedAt.Equal(tt.wantLastArrivedAt) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -405,7 +439,9 @@ func TestOrderBook_DropDeferUpdateCallBack(t *testing.T) {
 				},
 			})
 
-			assert.Equal(t, tt.wantDeferCallCount, deferCallCount)
+			if got, want := deferCallCount, tt.wantDeferCallCount; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }

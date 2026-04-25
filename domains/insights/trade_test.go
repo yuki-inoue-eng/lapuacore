@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -49,7 +48,9 @@ func TestTradeData_GetSize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			td := makeTradeData(tt.side, "100", tt.volume)
-			assert.Equal(t, true, td.GetSize().Equal(mustDecimal(t, tt.wantSize)))
+			if got := td.GetSize().Equal(mustDecimal(t, tt.wantSize)); !got {
+				t.Errorf("got %v, want true", got)
+			}
 		})
 	}
 }
@@ -97,9 +98,15 @@ func TestTradeDataList_Aggregation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, true, tt.list.GetSumSize().Equal(mustDecimal(t, tt.wantSumSize)))
-			assert.Equal(t, true, tt.list.GetSumSellVolume().Equal(mustDecimal(t, tt.wantSellVol)))
-			assert.Equal(t, true, tt.list.GetSumBuyVolume().Equal(mustDecimal(t, tt.wantBuyVol)))
+			if !tt.list.GetSumSize().Equal(mustDecimal(t, tt.wantSumSize)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !tt.list.GetSumSellVolume().Equal(mustDecimal(t, tt.wantSellVol)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !tt.list.GetSumBuyVolume().Equal(mustDecimal(t, tt.wantBuyVol)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -113,8 +120,12 @@ func TestTradeDataList_GetTimes(t *testing.T) {
 		{ExecAt: execAt.Add(time.Second), ArrivedAt: arrivedAt.Add(time.Second), Side: domains.SideSell, Volume: decimal.NewFromInt(1), Price: decimal.NewFromInt(100)},
 	}
 
-	assert.Equal(t, execAt, list.GetExecAt())
-	assert.Equal(t, arrivedAt, list.GetArrivedAt())
+	if got, want := list.GetExecAt(), execAt; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got, want := list.GetArrivedAt(), arrivedAt; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestTrade_IsReady(t *testing.T) {
@@ -141,7 +152,9 @@ func TestTrade_IsReady(t *testing.T) {
 			for i := 0; i < tt.updates; i++ {
 				tr.Update(TradeDataList{makeTradeData(domains.SideBuy, "100", "1")})
 			}
-			assert.Equal(t, tt.wantReady, tr.IsReady())
+			if got, want := tr.IsReady(), tt.wantReady; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -175,7 +188,9 @@ func TestTrade_SetUpdateCallback(t *testing.T) {
 			tr.Update(TradeDataList{makeTradeData(domains.SideBuy, "100", "1")})
 
 			for _, c := range counts {
-				assert.Equal(t, 1, c)
+				if got, want := c, 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}

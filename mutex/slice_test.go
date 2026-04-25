@@ -1,9 +1,8 @@
 package mutex
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/bmizerany/assert"
 )
 
 func TestSlice_AppendHead(t *testing.T) {
@@ -41,7 +40,9 @@ func TestSlice_AppendHead(t *testing.T) {
 		s := NewSlice[int](tt.input.init, tt.input.maxLen)
 		t.Run(tt.name, func(t *testing.T) {
 			s.AppendHead(tt.input.val)
-			assert.Equal(t, s.a, tt.expected.a)
+			if !reflect.DeepEqual(s.a, tt.expected.a) {
+				t.Errorf("got %v, want %v", s.a, tt.expected.a)
+			}
 		})
 	}
 }
@@ -81,7 +82,9 @@ func TestSlice_Append(t *testing.T) {
 		s := NewSlice[int](tt.input.init, tt.input.maxLen)
 		t.Run(tt.name, func(t *testing.T) {
 			s.Append(tt.input.val)
-			assert.Equal(t, s.a, tt.expected.a)
+			if !reflect.DeepEqual(s.a, tt.expected.a) {
+				t.Errorf("got %v, want %v", s.a, tt.expected.a)
+			}
 		})
 	}
 }
@@ -118,7 +121,9 @@ func Test_Get(t *testing.T) {
 		testTarget := NewSlice[int]([]int{10, 20, 30, 40, 50}, -1)
 		t.Run(tt.name, func(t *testing.T) {
 			actualVal := testTarget.Get(tt.inputIdx)
-			assert.Equal(t, actualVal, tt.expected)
+			if got, want := actualVal, tt.expected; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }

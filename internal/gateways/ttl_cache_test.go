@@ -6,8 +6,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/bmizerany/assert"
 )
 
 func TestTTLCache_AddIfAbsent(t *testing.T) {
@@ -59,7 +57,9 @@ func TestTTLCache_AddIfAbsent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cache := NewTTLCache(tt.ttl)
 			tt.setup(cache)
-			assert.Equal(t, tt.expected, cache.AddIfAbsent(tt.key))
+			if got, want := cache.AddIfAbsent(tt.key), tt.expected; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -85,7 +85,9 @@ func TestTTLCache_AddIfAbsent_ConcurrentAccess(t *testing.T) {
 	// Due to RWMutex-based locking (Get=RLock, Set=Lock), there is a small
 	// race window where multiple goroutines may see the key as absent.
 	// For the dedup use case this is acceptable (at most a few duplicates).
-	assert.T(t, firstSeenCount >= 1, "at least one goroutine should see first")
+	if !(firstSeenCount >= 1) {
+		t.Error("at least one goroutine should see first")
+	}
 }
 
 func TestTTLCache_StartCleanup(t *testing.T) {
@@ -96,7 +98,9 @@ func TestTTLCache_StartCleanup(t *testing.T) {
 	for i := 0; i < 1100; i++ {
 		cache.AddIfAbsent(fmt.Sprintf("key-%d", i))
 	}
-	assert.Equal(t, 1100, cache.entries.Len())
+	if got, want := cache.entries.Len(), 1100; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 
 	// wait for entries to expire
 	time.Sleep(20 * time.Millisecond)
@@ -109,7 +113,9 @@ func TestTTLCache_StartCleanup(t *testing.T) {
 	// wait for cleanup tick
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Equal(t, 0, cache.entries.Len())
+	if got, want := cache.entries.Len(), 0; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func TestTTLCache_StartCleanup_PreservesNonExpired(t *testing.T) {
@@ -126,7 +132,9 @@ func TestTTLCache_StartCleanup_PreservesNonExpired(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		cache.AddIfAbsent(fmt.Sprintf("fresh-%d", i))
 	}
-	assert.Equal(t, 1105, cache.entries.Len())
+	if got, want := cache.entries.Len(), 1105; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 
 	// start cleanup goroutine
 	ctx, cancel := context.WithCancel(context.Background())
@@ -137,9 +145,13 @@ func TestTTLCache_StartCleanup_PreservesNonExpired(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// only the 5 fresh entries should remain
-	assert.Equal(t, 5, cache.entries.Len())
+	if got, want := cache.entries.Len(), 5; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 	for i := 0; i < 5; i++ {
 		_, exists := cache.entries.Get(fmt.Sprintf("fresh-%d", i))
-		assert.Equal(t, true, exists)
+		if !exists {
+			t.Errorf("got %v, want true", exists)
+		}
 	}
 }

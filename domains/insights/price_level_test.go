@@ -1,9 +1,9 @@
 package insights
 
 import (
+	"reflect"
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -76,7 +76,9 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 				return true
 			})
 
-			assert.Equal(t, tt.want, got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -136,7 +138,9 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 				return count < tt.breakAfter
 			})
 
-			assert.Equal(t, tt.want, got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
@@ -201,7 +205,9 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 
 			got := m.SumVolume(mustDecimal(t, tt.price))
 
-			assert.Equal(t, tt.want, got.String())
+			if got, want := got.String(), tt.want; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -254,7 +260,9 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 
 			got := m.AvgExecPrice(mustDecimal(t, tt.qty))
 
-			assert.Equal(t, tt.want, got.String())
+			if got, want := got.String(), tt.want; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -308,7 +316,9 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 			}
 
 			got := m.BestLevel()
-			assert.Equal(t, tt.want, got.Price.String()+":"+got.Volume.String())
+			if got, want := got.Price.String()+":"+got.Volume.String(), tt.want; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
