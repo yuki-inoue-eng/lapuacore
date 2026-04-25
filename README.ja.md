@@ -7,7 +7,10 @@
 ## Background
 
 **lapuacore** は著者が開発・運用するプライベート HFT ライブラリ **lapua** のアーキテクチャと設計思想を継承し、公開可能な範囲で再構成したライブラリです。
-著者は個人投資家として lapua を基盤に CoinEx の公式マーケットメイカーを務め、ピーク時に月間約 $10M の流動性を供給していました。
+著者は個人投資家として lapua を基盤に **CoinEx の公式マーケットメイカー**を務め、ピーク時に**月間約 $10M の流動性を供給**していました。
+
+![CoinEx Futures Market Maker LV5 — 月間約 $10M の取引量](docs/images/coinex-market-maker-lv5.png)
+
 lapuacore では ドメインモデル、ゲートウェイ抽象化、並行処理プリミティブを備え、CoinEx と Bybit の2取引所アダプタを実装しています。
 
 
