@@ -44,9 +44,9 @@ discord:
 
 func TestUpdateConfig(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		newConfig string
-		wantKey1 string
+		wantKey1  string
 	}{
 		{
 			name: "applies update",
@@ -90,10 +90,10 @@ params:
 
 func TestUpdateSecretFromFile(t *testing.T) {
 	tests := []struct {
-		name         string
-		newSecret    string
-		wantApiKey   string
-		wantUrl      string
+		name       string
+		newSecret  string
+		wantApiKey string
+		wantUrl    string
 	}{
 		{
 			name: "updates coinex credential",

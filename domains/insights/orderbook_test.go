@@ -140,15 +140,15 @@ func TestOrderBook_CalcBestPrice(t *testing.T) {
 
 func TestOrderBook_AvgExecPrice(t *testing.T) {
 	tests := []struct {
-		name  string
+		name     string
 		bookSide domains.BookSide
-		asks  []orderBookTestLevel
-		bids  []orderBookTestLevel
-		qty   string
-		want  string
+		asks     []orderBookTestLevel
+		bids     []orderBookTestLevel
+		qty      string
+		want     string
 	}{
 		{
-			name:  "ask side average execution price is rounded down to tick size",
+			name:     "ask side average execution price is rounded down to tick size",
 			bookSide: domains.BookSideAsk,
 			asks: []orderBookTestLevel{
 				{seqID: 1, price: "100", volume: "1"},
@@ -158,7 +158,7 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 			want: "100.66",
 		},
 		{
-			name:  "bid side average execution price is rounded down to tick size",
+			name:     "bid side average execution price is rounded down to tick size",
 			bookSide: domains.BookSideBid,
 			bids: []orderBookTestLevel{
 				{seqID: 1, price: "102", volume: "1"},
@@ -168,10 +168,10 @@ func TestOrderBook_AvgExecPrice(t *testing.T) {
 			want: "101.33",
 		},
 		{
-			name:  "returns zero for an unknown book side",
+			name:     "returns zero for an unknown book side",
 			bookSide: domains.BookSideNone,
-			qty:   "3",
-			want:  "0",
+			qty:      "3",
+			want:     "0",
 		},
 	}
 

@@ -12,9 +12,9 @@ func newDedupTopic(inner Topic, cache *TTLCache) Topic {
 	return &dedupTopic{inner: inner, cache: cache}
 }
 
-func (d *dedupTopic) TopicName() string        { return d.inner.TopicName() }
-func (d *dedupTopic) SubscribeMsgID() string    { return d.inner.SubscribeMsgID() }
-func (d *dedupTopic) SubscribeMsg() []byte      { return d.inner.SubscribeMsg() }
+func (d *dedupTopic) TopicName() string              { return d.inner.TopicName() }
+func (d *dedupTopic) SubscribeMsgID() string         { return d.inner.SubscribeMsgID() }
+func (d *dedupTopic) SubscribeMsg() []byte           { return d.inner.SubscribeMsg() }
 func (d *dedupTopic) MessageID(rawMsg []byte) string { return d.inner.MessageID(rawMsg) }
 
 func (d *dedupTopic) MsgHandler(timestamp *time.Time, rawMsg []byte) error {

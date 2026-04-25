@@ -24,14 +24,14 @@ func dealerAddLivingOrder(d *DealerImpl, order *Order, status OrderStatus) {
 
 func TestSendOrder(t *testing.T) {
 	tests := []struct {
-		name          string
-		acceptOrder   bool
-		duplicate     bool
-		agentErr      error
-		wantErr       bool
-		wantStatus    OrderStatus
+		name           string
+		acceptOrder    bool
+		duplicate      bool
+		agentErr       error
+		wantErr        bool
+		wantStatus     OrderStatus
 		wantDoneReason *OrderDoneReason
-		wantInLiving  bool
+		wantInLiving   bool
 	}{
 		{
 			name:         "rejects when acceptOrder is false",

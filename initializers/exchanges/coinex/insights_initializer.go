@@ -13,9 +13,9 @@ import (
 var Insights *coinexInsights
 
 type coinexInsights struct {
-	trades      map[*domains.Symbol]*insights.TradeImpl
-	orderBooks  map[*domains.Symbol]*insights.OrderBookImpl
-	quotes map[*domains.Symbol]*insights.QuoteImpl
+	trades     map[*domains.Symbol]*insights.TradeImpl
+	orderBooks map[*domains.Symbol]*insights.OrderBookImpl
+	quotes     map[*domains.Symbol]*insights.QuoteImpl
 }
 
 func (i *coinexInsights) EXName() string {
@@ -123,9 +123,9 @@ func InitInsights(tradeSymbols []*domains.Symbol, obSymbols []*domains.Symbol, q
 	}
 
 	ins := &coinexInsights{
-		trades:      trades,
-		orderBooks:  orderBooks,
-		quotes: quotes,
+		trades:     trades,
+		orderBooks: orderBooks,
+		quotes:     quotes,
 	}
 	gatewayManager.setInsights(ins)
 	Insights = ins

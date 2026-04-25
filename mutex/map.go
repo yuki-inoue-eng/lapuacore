@@ -68,7 +68,7 @@ func (m *Map[K, V]) Gets(keys []K) []V {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var result []V
-	for i, _ := range keys {
+	for i := range keys {
 		result = append(result, m.mm[keys[i]])
 	}
 	return result
