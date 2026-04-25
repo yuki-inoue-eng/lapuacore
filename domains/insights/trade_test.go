@@ -57,11 +57,11 @@ func TestTradeData_GetSize(t *testing.T) {
 
 func TestTradeDataList_Aggregation(t *testing.T) {
 	tests := []struct {
-		name          string
-		list          TradeDataList
-		wantSumSize   string
-		wantSellVol   string
-		wantBuyVol    string
+		name        string
+		list        TradeDataList
+		wantSumSize string
+		wantSellVol string
+		wantBuyVol  string
 	}{
 		{
 			name: "mixed buy and sell",

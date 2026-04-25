@@ -39,13 +39,13 @@ func newTestPriceLevelMap(t *testing.T, bookSide domains.BookSide, levels []test
 
 func TestPriceLevelMap_ordering(t *testing.T) {
 	tests := []struct {
-		name   string
-		bookSide  domains.BookSide
-		levels []testLevel
-		want   []string
+		name     string
+		bookSide domains.BookSide
+		levels   []testLevel
+		want     []string
 	}{
 		{
-			name:  "ask sorts prices in ascending order",
+			name:     "ask sorts prices in ascending order",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
@@ -55,7 +55,7 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 			want: []string{"99", "100", "101"},
 		},
 		{
-			name:  "bid sorts prices in descending order",
+			name:     "bid sorts prices in descending order",
 			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
@@ -86,13 +86,13 @@ func TestPriceLevelMap_ordering(t *testing.T) {
 func TestPriceLevelMap_SortedRange(t *testing.T) {
 	tests := []struct {
 		name       string
-		bookSide      domains.BookSide
+		bookSide   domains.BookSide
 		levels     []testLevel
 		breakAfter int
 		want       []string
 	}{
 		{
-			name:  "ask iterates in ascending order",
+			name:     "ask iterates in ascending order",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
@@ -103,7 +103,7 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 			want:       []string{"99", "100", "101"},
 		},
 		{
-			name:  "bid iterates in descending order",
+			name:     "bid iterates in descending order",
 			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
@@ -114,7 +114,7 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 			want:       []string{"101", "100", "99"},
 		},
 		{
-			name:  "iteration stops when callback returns false",
+			name:     "iteration stops when callback returns false",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "101", volume: "1"},
@@ -147,14 +147,14 @@ func TestPriceLevelMap_SortedRange(t *testing.T) {
 
 func TestPriceLevelMap_SumVolume(t *testing.T) {
 	tests := []struct {
-		name   string
-		bookSide  domains.BookSide
-		levels []testLevel
-		price  string
-		want   string
+		name     string
+		bookSide domains.BookSide
+		levels   []testLevel
+		price    string
+		want     string
 	}{
 		{
-			name:  "ask returns cumulative volume up to the specified price",
+			name:     "ask returns cumulative volume up to the specified price",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
@@ -165,7 +165,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 			want:  "3",
 		},
 		{
-			name:  "ask returns zero when the specified price is already fully marketable",
+			name:     "ask returns zero when the specified price is already fully marketable",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
@@ -176,7 +176,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 			want:  "0",
 		},
 		{
-			name:  "bid returns cumulative volume up to the specified price",
+			name:     "bid returns cumulative volume up to the specified price",
 			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
@@ -187,7 +187,7 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 			want:  "3",
 		},
 		{
-			name:  "bid returns zero when the specified price is already fully marketable",
+			name:     "bid returns zero when the specified price is already fully marketable",
 			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
@@ -214,14 +214,14 @@ func TestPriceLevelMap_SumVolume(t *testing.T) {
 
 func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 	tests := []struct {
-		name   string
-		bookSide  domains.BookSide
-		levels []testLevel
-		qty    string
-		want   string
+		name     string
+		bookSide domains.BookSide
+		levels   []testLevel
+		qty      string
+		want     string
 	}{
 		{
-			name:  "ask returns average execution price",
+			name:     "ask returns average execution price",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
@@ -232,7 +232,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 			want: "100.6", // (100*1 + 101*1.5) / 2.5
 		},
 		{
-			name:  "bid returns average execution price",
+			name:     "bid returns average execution price",
 			bookSide: domains.BookSideBid,
 			levels: []testLevel{
 				{price: "102", volume: "1"},
@@ -243,7 +243,7 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 			want: "101.4", // (102*1 + 101*1.5) / 2.5
 		},
 		{
-			name:  "returns average execution price when qty exactly matches total available volume",
+			name:     "returns average execution price when qty exactly matches total available volume",
 			bookSide: domains.BookSideAsk,
 			levels: []testLevel{
 				{price: "100", volume: "1"},
@@ -269,14 +269,14 @@ func TestPriceLevelMap_AvgExecPrice(t *testing.T) {
 
 func TestPriceLevelMap_BestLevel(t *testing.T) {
 	tests := []struct {
-		name  string
+		name     string
 		bookSide domains.BookSide
-		setup []testLevel
-		drop  string
-		want  string
+		setup    []testLevel
+		drop     string
+		want     string
 	}{
 		{
-			name:  "ask returns the lowest price as best",
+			name:     "ask returns the lowest price as best",
 			bookSide: domains.BookSideAsk,
 			setup: []testLevel{
 				{price: "101", volume: "1"},
@@ -286,7 +286,7 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 			want: "100:2",
 		},
 		{
-			name:  "bid returns the highest price as best",
+			name:     "bid returns the highest price as best",
 			bookSide: domains.BookSideBid,
 			setup: []testLevel{
 				{price: "101", volume: "1"},
@@ -296,7 +296,7 @@ func TestPriceLevelMap_BestLevel(t *testing.T) {
 			want: "102:3",
 		},
 		{
-			name:  "recalculates best record after dropping current best",
+			name:     "recalculates best record after dropping current best",
 			bookSide: domains.BookSideAsk,
 			setup: []testLevel{
 				{price: "100", volume: "1"},

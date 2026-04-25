@@ -129,17 +129,17 @@ func TestHandleCancelOrderResp(t *testing.T) {
 			wantDoneCount:  1,
 		},
 		{
-			name:         "request error rejects cancel (order returns to Pending)",
-			requestErr:   errors.New("timeout"),
-			wantStatus:   OrderStatusPending,
-			wantInLiving: true,
+			name:          "request error rejects cancel (order returns to Pending)",
+			requestErr:    errors.New("timeout"),
+			wantStatus:    OrderStatusPending,
+			wantInLiving:  true,
 			wantDoneCount: 0,
 		},
 		{
-			name:         "per-order error rejects cancel (order returns to Pending)",
-			orderErr:     errors.New("unknown error"),
-			wantStatus:   OrderStatusPending,
-			wantInLiving: true,
+			name:          "per-order error rejects cancel (order returns to Pending)",
+			orderErr:      errors.New("unknown error"),
+			wantStatus:    OrderStatusPending,
+			wantInLiving:  true,
 			wantDoneCount: 0,
 		},
 		{
@@ -245,10 +245,10 @@ func TestHandleAmendOrderResp(t *testing.T) {
 
 func TestHandleOrderData(t *testing.T) {
 	tests := []struct {
-		name           string
-		setup          func(d *DealerImpl) []*Order
-		data           func(orders []*Order) []*OrderData
-		check          func(t *testing.T, d *DealerImpl, orders []*Order)
+		name  string
+		setup func(d *DealerImpl) []*Order
+		data  func(orders []*Order) []*OrderData
+		check func(t *testing.T, d *DealerImpl, orders []*Order)
 	}{
 		{
 			name: "Filled: moves order to doneOrders with DoneReasonFilled",

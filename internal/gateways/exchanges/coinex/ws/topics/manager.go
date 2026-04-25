@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	chanBT    = "bbo.update"       // bookticker
-	chanOB    = "depth.update"     // orderbook
-	chanTrade = "deals.update"     // trade
-	chanOrder = "order.update"     // personal order
-	chanPos   = "position.update"  // personal position
+	chanBT    = "bbo.update"      // bookticker
+	chanOB    = "depth.update"    // orderbook
+	chanTrade = "deals.update"    // trade
+	chanOrder = "order.update"    // personal order
+	chanPos   = "position.update" // personal position
 )
 
 // Manager implements gateways.TopicManager for CoinEx.
@@ -101,8 +101,8 @@ func (mg *Manager) getTopicName(rawMsg []byte) (string, error) {
 	msg := struct {
 		Method string `json:"method"`
 		Data   struct {
-			Symbol   string `json:"market"`
-			Order    struct {
+			Symbol string `json:"market"`
+			Order  struct {
 				Symbol string `json:"market"`
 			} `json:"order"`
 			Position struct {

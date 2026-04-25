@@ -16,9 +16,9 @@ import (
 var Insights *bybitInsights
 
 type bybitInsights struct {
-	trades      map[*domains.Symbol]*insights.TradeImpl
-	orderBooks  map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBookImpl
-	quotes map[*domains.Symbol]*insights.QuoteImpl
+	trades     map[*domains.Symbol]*insights.TradeImpl
+	orderBooks map[*domains.Symbol]map[topics.OBDepth]*insights.OrderBookImpl
+	quotes     map[*domains.Symbol]*insights.QuoteImpl
 }
 
 func (i *bybitInsights) EXName() string {
@@ -140,9 +140,9 @@ func InitInsights(
 	}
 
 	ins := &bybitInsights{
-		trades:      trades,
-		orderBooks:  orderBooks,
-		quotes: quotes,
+		trades:     trades,
+		orderBooks: orderBooks,
+		quotes:     quotes,
 	}
 	gatewayManager.setInsights(ins)
 	Insights = ins

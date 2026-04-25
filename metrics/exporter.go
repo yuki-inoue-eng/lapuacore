@@ -27,8 +27,8 @@ type Exporter struct {
 	latencyTranslator *translators.LatencyTranslator
 
 	// components for collection
-	latencyMeasurer    []*gateways.LatencyMeasurer
-	customMetricQueue  []*measurements.CustomMetric
+	latencyMeasurer   []*gateways.LatencyMeasurer
+	customMetricQueue []*measurements.CustomMetric
 }
 
 // NewExporter initializes a metrics exporter.
@@ -46,9 +46,9 @@ func NewExporter(bucketName, strategyName, url, token string) (*Exporter, error)
 
 func newExporter(strategyName string, client *influxdb3.Client, noopMode bool) *Exporter {
 	return &Exporter{
-		noopMode:             noopMode,
-		strategyName:         strategyName,
-		bucketClient:         client,
+		noopMode:          noopMode,
+		strategyName:      strategyName,
+		bucketClient:      client,
 		latencyTranslator: translators.NewLatencyTranslator(),
 	}
 }
