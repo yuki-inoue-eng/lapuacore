@@ -7,7 +7,10 @@ Exchange-agnostic low-latency trading system core library (Go)
 ## Background
 
 **lapuacore** inherits the architecture and design philosophy of **lapua**, a private HFT library developed and operated by the author, and restructures it for public release.
-The author, as an independent individual trader, served as an official market maker on CoinEx using lapua, providing approximately $10M/month in liquidity at peak.
+The author, as an independent individual trader, served as an **official market maker on CoinEx** using lapua, **providing approximately $10M/month in liquidity** at peak.
+
+![CoinEx Futures Market Maker LV5 — ~$10M monthly trading volume](docs/images/coinex-market-maker-lv5.png)
+
 lapuacore provides domain models, gateway abstractions, and concurrency primitives, with exchange adapters implemented for CoinEx and Bybit.
 
 
