@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -82,15 +81,23 @@ func TestSendOrder(t *testing.T) {
 
 			err := d.SendOrder(order)
 
-			assert.Equal(t, tt.wantErr, err != nil)
+			if got, want := err != nil, tt.wantErr; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 			if tt.wantStatus != 0 {
-				assert.Equal(t, tt.wantStatus, order.GetStatus())
+				if got, want := order.GetStatus(), tt.wantStatus; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantDoneReason != nil {
-				assert.Equal(t, *tt.wantDoneReason, *order.GetOrderDoneReason())
+				if got, want := *order.GetOrderDoneReason(), *tt.wantDoneReason; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if !tt.duplicate {
-				assert.Equal(t, tt.wantInLiving, d.LivingOrders.getOrder(order.GetID()) != nil)
+				if got, want := d.LivingOrders.getOrder(order.GetID()) != nil, tt.wantInLiving; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}
@@ -179,19 +186,31 @@ func TestAmendOrder(t *testing.T) {
 				_ = d.AmendOrder(order, *tt.secondCall)
 			}
 
-			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, tt.wantAgentCalled, agentCalled)
+			if got, want := err != nil, tt.wantErr; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := agentCalled, tt.wantAgentCalled; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
 			if tt.wantOrderStatus != 0 {
-				assert.Equal(t, tt.wantOrderStatus, order.GetStatus())
+				if got, want := order.GetStatus(), tt.wantOrderStatus; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantCallbackCount > 0 {
-				assert.Equal(t, tt.wantCallbackCount, len(order.createCallbacks))
+				if got, want := len(order.createCallbacks), tt.wantCallbackCount; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantDetailPrice != "" {
 				stored, ok := d.amendingDetailMap.Get(order.GetID())
-				assert.Equal(t, true, ok)
-				assert.Equal(t, true, stored.Price.Equal(decimal.RequireFromString(tt.wantDetailPrice)))
+				if !ok {
+					t.Errorf("got %v, want true", ok)
+				}
+				if !stored.Price.Equal(decimal.RequireFromString(tt.wantDetailPrice)) {
+					t.Errorf("got %v, want true", false)
+				}
 			}
 			if tt.wantRejectCB {
 				select {
@@ -256,16 +275,26 @@ func TestCancelOrder(t *testing.T) {
 
 			err := d.CancelOrder(order)
 
-			assert.Equal(t, nil, err)
-			assert.Equal(t, tt.wantAgentCalled, agentCalled)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got, want := agentCalled, tt.wantAgentCalled; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 			if tt.wantOrderStatus != 0 {
-				assert.Equal(t, tt.wantOrderStatus, order.GetStatus())
+				if got, want := order.GetStatus(), tt.wantOrderStatus; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantCreateCBCount > 0 {
-				assert.Equal(t, tt.wantCreateCBCount, len(order.createCallbacks))
+				if got, want := len(order.createCallbacks), tt.wantCreateCBCount; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 			if tt.wantAmendCBCount > 0 {
-				assert.Equal(t, tt.wantAmendCBCount, len(order.amendCallbacks))
+				if got, want := len(order.amendCallbacks), tt.wantAmendCBCount; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}
@@ -284,7 +313,9 @@ func TestCancelOrder_ReplacesExistingCallbacks(t *testing.T) {
 		_ = d.CancelOrder(order)
 		_ = d.CancelOrder(order)
 
-		assert.Equal(t, 1, len(order.createCallbacks))
+		if got, want := len(order.createCallbacks), 1; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 	})
 
 	t.Run("Amending: duplicate CancelOrder keeps only one callback", func(t *testing.T) {
@@ -298,7 +329,9 @@ func TestCancelOrder_ReplacesExistingCallbacks(t *testing.T) {
 		_ = d.CancelOrder(order)
 		_ = d.CancelOrder(order)
 
-		assert.Equal(t, 1, len(order.amendCallbacks))
+		if got, want := len(order.amendCallbacks), 1; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 	})
 
 	t.Run("Sending: CancelOrder after AmendOrder replaces amend callback with cancel", func(t *testing.T) {
@@ -316,17 +349,25 @@ func TestCancelOrder_ReplacesExistingCallbacks(t *testing.T) {
 
 		detail := AmendDetail{Price: decimal.RequireFromString("101"), Qty: decimal.RequireFromString("0.01")}
 		_ = d.AmendOrder(order, detail)
-		assert.Equal(t, 1, len(order.createCallbacks))
+		if got, want := len(order.createCallbacks), 1; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 
 		_ = d.CancelOrder(order)
-		assert.Equal(t, 1, len(order.createCallbacks))
+		if got, want := len(order.createCallbacks), 1; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 
 		// Verify pending amend detail was cleared
 		_, ok := d.amendingDetailMap.Get(order.GetID())
-		assert.Equal(t, false, ok)
+		if got, want := ok, false; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 
 		// Amend agent should never have been called
-		assert.Equal(t, false, amendCalled)
+		if got, want := amendCalled, false; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 	})
 }
 

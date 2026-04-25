@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -54,7 +53,9 @@ func TestHandlePositionData_UpdatesPosition(t *testing.T) {
 			dealer := newTestDealer(&mockAgent{})
 			dealer.HandlePositionData(tt.datas)
 
-			assert.Equal(t, true, dealer.CurrentPosition.Get().Equal(decimal.RequireFromString(tt.wantPos)))
+			if !dealer.CurrentPosition.Get().Equal(decimal.RequireFromString(tt.wantPos)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -106,7 +107,9 @@ func TestHandlePositionData_TimestampOrdering(t *testing.T) {
 			dealer.HandlePositionData(tt.first)
 			dealer.HandlePositionData(tt.second)
 
-			assert.Equal(t, true, dealer.CurrentPosition.Get().Equal(decimal.RequireFromString(tt.wantPos)))
+			if !dealer.CurrentPosition.Get().Equal(decimal.RequireFromString(tt.wantPos)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -144,7 +147,9 @@ func TestHandlePositionData_HandlersInvoked(t *testing.T) {
 			})
 
 			for _, c := range counts {
-				assert.Equal(t, 1, c)
+				if got, want := c, 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}
@@ -190,8 +195,12 @@ func TestHandlePositionData_Validation(t *testing.T) {
 
 			dealer.HandlePositionData(tt.datas)
 
-			assert.Equal(t, tt.wantUpdate, handlerCalled)
-			assert.Equal(t, true, dealer.CurrentPosition.Get().Equal(decimal.Zero))
+			if got, want := handlerCalled, tt.wantUpdate; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if !dealer.CurrentPosition.Get().Equal(decimal.Zero) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }

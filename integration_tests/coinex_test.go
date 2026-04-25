@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 	"github.com/yuki-inoue-eng/lapuacore/initializers/exchanges/coinex"
 	"github.com/yuki-inoue-eng/lapuacore/initializers/lapua"
@@ -38,25 +37,49 @@ func TestCoinExInsightsFlow(t *testing.T) {
 	ready := waitForReady(ctx, func() bool {
 		return coinex.Insights.IsEverythingReady()
 	})
-	assert.Equal(t, true, ready, "CoinEx insights did not become ready within timeout")
+	if !ready {
+		t.Fatal("CoinEx insights did not become ready within timeout")
+	}
 
 	// Verify market data
 	ob := coinex.Insights.GetOrderBook(symbol)
-	assert.NotEqual(t, nil, ob)
-	assert.NotEqual(t, nil, ob.GetBestAsk())
-	assert.NotEqual(t, nil, ob.GetBestBid())
-	assert.Equal(t, true, ob.GetBestAsk().Price.IsPositive())
-	assert.Equal(t, true, ob.GetBestBid().Price.IsPositive())
-	assert.Equal(t, true, ob.GetBestAsk().Price.GreaterThan(ob.GetBestBid().Price))
+	if ob == nil {
+		t.Fatal("expected non-nil OrderBook")
+	}
+	if ob.GetBestAsk() == nil {
+		t.Fatal("expected non-nil BestAsk")
+	}
+	if ob.GetBestBid() == nil {
+		t.Fatal("expected non-nil BestBid")
+	}
+	if !ob.GetBestAsk().Price.IsPositive() {
+		t.Errorf("got %v, want true", false)
+	}
+	if !ob.GetBestBid().Price.IsPositive() {
+		t.Errorf("got %v, want true", false)
+	}
+	if !ob.GetBestAsk().Price.GreaterThan(ob.GetBestBid().Price) {
+		t.Errorf("got %v, want true", false)
+	}
 
 	quote := coinex.Insights.GetQuote(symbol)
-	assert.NotEqual(t, nil, quote)
-	assert.Equal(t, true, quote.GetBestAsk().Price.IsPositive())
-	assert.Equal(t, true, quote.GetBestBid().Price.IsPositive())
+	if quote == nil {
+		t.Fatal("expected non-nil Quote")
+	}
+	if !quote.GetBestAsk().Price.IsPositive() {
+		t.Errorf("got %v, want true", false)
+	}
+	if !quote.GetBestBid().Price.IsPositive() {
+		t.Errorf("got %v, want true", false)
+	}
 
 	trade := coinex.Insights.GetTrade(symbol)
-	assert.NotEqual(t, nil, trade)
-	assert.Equal(t, true, trade.IsReady())
+	if trade == nil {
+		t.Fatal("expected non-nil Trade")
+	}
+	if !trade.IsReady() {
+		t.Errorf("got %v, want true", false)
+	}
 
 	t.Logf("OrderBook bestAsk=%s bestBid=%s", ob.GetBestAsk().Price, ob.GetBestBid().Price)
 	t.Logf("Quote bestAsk=%s bestBid=%s", quote.GetBestAsk().Price, quote.GetBestBid().Price)

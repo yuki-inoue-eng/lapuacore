@@ -69,5 +69,5 @@ docs/             ← Getting-started guides (EN/JA)
 
 ### Test Patterns
 
-Tests use table-driven subtests with a `mockAgent` (defined in `testhelper_test.go`) that exposes function fields for injection. Assertions use `github.com/bmizerany/assert`.
+Tests use table-driven subtests with a `mockAgent` (defined in `testhelper_test.go`) that exposes function fields for injection. Assertions use the standard `testing` package.
 Integration tests use `//go:build integration` tag and connect to live exchange WebSocket APIs.

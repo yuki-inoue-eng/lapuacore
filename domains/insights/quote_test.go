@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/shopspring/decimal"
 	"github.com/yuki-inoue-eng/lapuacore/domains"
 )
@@ -100,20 +99,34 @@ func TestQuote_Update(t *testing.T) {
 				q.Update(msg)
 			}
 
-			assert.Equal(t, true, q.GetBestAsk().Price.Equal(mustDecimal(t, tt.wantAskPrice)))
-			assert.Equal(t, true, q.GetBestBid().Price.Equal(mustDecimal(t, tt.wantBidPrice)))
-			assert.Equal(t, tt.wantSeqID, q.GetSeqID())
-			assert.Equal(t, tt.wantExecAt, *q.GetLastExecAt())
-			assert.Equal(t, tt.wantArrivedAt, *q.GetLastArrivedAt())
+			if !q.GetBestAsk().Price.Equal(mustDecimal(t, tt.wantAskPrice)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !q.GetBestBid().Price.Equal(mustDecimal(t, tt.wantBidPrice)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if got, want := q.GetSeqID(), tt.wantSeqID; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := *q.GetLastExecAt(), tt.wantExecAt; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := *q.GetLastArrivedAt(), tt.wantArrivedAt; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
 			if tt.wantBeforeAsk != "" {
 				q.mu.RLock()
-				assert.Equal(t, true, q.beforeBestAsk.Price.Equal(mustDecimal(t, tt.wantBeforeAsk)))
+				if !q.beforeBestAsk.Price.Equal(mustDecimal(t, tt.wantBeforeAsk)) {
+					t.Errorf("got %v, want true", false)
+				}
 				q.mu.RUnlock()
 			}
 			if tt.wantBeforeBid != "" {
 				q.mu.RLock()
-				assert.Equal(t, true, q.beforeBestBid.Price.Equal(mustDecimal(t, tt.wantBeforeBid)))
+				if !q.beforeBestBid.Price.Equal(mustDecimal(t, tt.wantBeforeBid)) {
+					t.Errorf("got %v, want true", false)
+				}
 				q.mu.RUnlock()
 			}
 		})
@@ -156,7 +169,9 @@ func TestQuote_IsReady(t *testing.T) {
 				))
 			}
 
-			assert.Equal(t, tt.wantReady, q.IsReady())
+			if got, want := q.IsReady(), tt.wantReady; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -193,10 +208,18 @@ func TestQuote_GetDiff(t *testing.T) {
 			diffAsk := q.GetDiffBestAsk()
 			diffBid := q.GetDiffBestBid()
 
-			assert.Equal(t, true, diffAsk.Price.Equal(mustDecimal(t, tt.wantDiffAsk)))
-			assert.Equal(t, true, diffAsk.Volume.Equal(mustDecimal(t, tt.wantDiffAskVol)))
-			assert.Equal(t, true, diffBid.Price.Equal(mustDecimal(t, tt.wantDiffBid)))
-			assert.Equal(t, true, diffBid.Volume.Equal(mustDecimal(t, tt.wantDiffBidVol)))
+			if !diffAsk.Price.Equal(mustDecimal(t, tt.wantDiffAsk)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !diffAsk.Volume.Equal(mustDecimal(t, tt.wantDiffAskVol)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !diffBid.Price.Equal(mustDecimal(t, tt.wantDiffBid)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !diffBid.Volume.Equal(mustDecimal(t, tt.wantDiffBidVol)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -228,8 +251,12 @@ func TestQuote_CalcBestPrice(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotAsk, gotBid := q.CalcBestPrice(mustDecimal(t, tt.midPrice))
 
-			assert.Equal(t, true, gotAsk.Equal(mustDecimal(t, tt.wantBestAsk)))
-			assert.Equal(t, true, gotBid.Equal(mustDecimal(t, tt.wantBestBid)))
+			if !gotAsk.Equal(mustDecimal(t, tt.wantBestAsk)) {
+				t.Errorf("got %v, want true", false)
+			}
+			if !gotBid.Equal(mustDecimal(t, tt.wantBestBid)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -258,7 +285,9 @@ func TestQuote_RoundToTickSize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := q.RoundToTickSize(mustDecimal(t, tt.price))
 
-			assert.Equal(t, true, got.Equal(mustDecimal(t, tt.want)))
+			if !got.Equal(mustDecimal(t, tt.want)) {
+				t.Errorf("got %v, want true", false)
+			}
 		})
 	}
 }
@@ -294,7 +323,9 @@ func TestQuote_Callback(t *testing.T) {
 			q.Update(makeQuoteData(1, baseTime, "100", "1", "99", "1"))
 
 			for _, c := range counts {
-				assert.Equal(t, 1, c)
+				if got, want := c, 1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}
@@ -303,6 +334,10 @@ func TestQuote_Callback(t *testing.T) {
 func TestQuote_Getters(t *testing.T) {
 	q := NewQuote(domains.SymbolCoinExFuturesBTCUSDT)
 
-	assert.Equal(t, true, q.GetTickSize().Equal(mustDecimal(t, "0.01")))
-	assert.Equal(t, true, q.GetMinOrderQty().Equal(mustDecimal(t, "0.0001")))
+	if !q.GetTickSize().Equal(mustDecimal(t, "0.01")) {
+		t.Errorf("got %v, want true", false)
+	}
+	if !q.GetMinOrderQty().Equal(mustDecimal(t, "0.0001")) {
+		t.Errorf("got %v, want true", false)
+	}
 }

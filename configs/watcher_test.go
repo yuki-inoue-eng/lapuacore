@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/bmizerany/assert"
 )
 
 func writeFile(t *testing.T, path, content string) {
@@ -69,15 +67,23 @@ params:
 
 			noopCancel := func(error) {}
 			w, err := NewWatcher(noopCancel, configPath, secretPath)
-			assert.Equal(t, nil, err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			assert.Equal(t, "100", w.GetConfig().Params.Get("key1"))
+			if got, want := w.GetConfig().Params.Get("key1"), "100"; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
 			writeFile(t, configPath, tt.newConfig)
 			err = w.updateConfig()
-			assert.Equal(t, nil, err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			assert.Equal(t, tt.wantKey1, w.GetConfig().Params.Get("key1"))
+			if got, want := w.GetConfig().Params.Get("key1"), tt.wantKey1; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -132,17 +138,29 @@ discord:
 			configPath, secretPath := setupWatcherFiles(t)
 			noopCancel := func(error) {}
 			w, err := NewWatcher(noopCancel, configPath, secretPath)
-			assert.Equal(t, nil, err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			assert.Equal(t, "initial_key", w.GetSecret().CoinEx.GetApiKey())
-			assert.Equal(t, "http://localhost:8086", w.GetSecret().InfluxDB.GetUrl())
+			if got, want := w.GetSecret().CoinEx.GetApiKey(), "initial_key"; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := w.GetSecret().InfluxDB.GetUrl(), "http://localhost:8086"; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 
 			writeFile(t, secretPath, tt.newSecret)
 			err = w.updateSecretFromFile()
-			assert.Equal(t, nil, err)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			assert.Equal(t, tt.wantApiKey, w.GetSecret().CoinEx.GetApiKey())
-			assert.Equal(t, tt.wantUrl, w.GetSecret().InfluxDB.GetUrl())
+			if got, want := w.GetSecret().CoinEx.GetApiKey(), tt.wantApiKey; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := w.GetSecret().InfluxDB.GetUrl(), tt.wantUrl; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
 		})
 	}
 }
@@ -152,18 +170,40 @@ func TestNewWatcher(t *testing.T) {
 		configPath, secretPath := setupWatcherFiles(t)
 		noopCancel := func(error) {}
 		w, err := NewWatcher(noopCancel, configPath, secretPath)
-		assert.Equal(t, nil, err)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
-		assert.Equal(t, "test-strategy", w.GetConfig().Strategy.Name)
-		assert.Equal(t, "100", w.GetConfig().Params.Get("key1"))
-		assert.Equal(t, "hello", w.GetConfig().Params.Get("key2"))
-		assert.Equal(t, "initial_key", w.GetSecret().CoinEx.GetApiKey())
-		assert.Equal(t, "initial_secret", w.GetSecret().CoinEx.GetSecret())
-		assert.Equal(t, "http://localhost:8086", w.GetSecret().InfluxDB.GetUrl())
-		assert.Equal(t, "initial_token", w.GetSecret().InfluxDB.GetToken())
-		assert.Equal(t, "https://discord.com/info", w.GetSecret().Discord.GetInfoUrl())
-		assert.Equal(t, "https://discord.com/warn", w.GetSecret().Discord.GetWarnUrl())
-		assert.Equal(t, "https://discord.com/emergency", w.GetSecret().Discord.GetEmergencyUrl())
+		if got, want := w.GetConfig().Strategy.Name, "test-strategy"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetConfig().Params.Get("key1"), "100"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetConfig().Params.Get("key2"), "hello"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().CoinEx.GetApiKey(), "initial_key"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().CoinEx.GetSecret(), "initial_secret"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().InfluxDB.GetUrl(), "http://localhost:8086"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().InfluxDB.GetToken(), "initial_token"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().Discord.GetInfoUrl(), "https://discord.com/info"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().Discord.GetWarnUrl(), "https://discord.com/warn"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := w.GetSecret().Discord.GetEmergencyUrl(), "https://discord.com/emergency"; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
 	})
 }
 
